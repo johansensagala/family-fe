@@ -4,8 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getItems } from '../../services/itemService';
 
+interface Item {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+}
+
 export default function ItemsPage() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -17,18 +24,16 @@ export default function ItemsPage() {
   }, []);
 
   const handleInsert = () => {
-    router.push('/items/insert'); // Navigate to insert page
+    router.push('/items/insert');
   };
 
   const handleEdit = (id: string) => {
-    router.push(`/items/edit/${id}`); // Navigate to edit page with the specific item id
+    router.push(`/items/edit/${id}`);
   };
 
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-4xl font-bold text-center text-blue-600 mb-6">Item List</h1>
-
-      {/* Insert and Edit Buttons */}
       <div className="flex justify-between mb-6">
         <button
           onClick={handleInsert}
@@ -56,7 +61,6 @@ export default function ItemsPage() {
                   <td className="px-4 py-2 text-gray-700">{item.description}</td>
                   <td className="px-4 py-2 text-gray-700">${item.price}</td>
                   <td className="px-4 py-2">
-                    {/* Edit Button for each item */}
                     <button
                       onClick={() => handleEdit(item.id)}
                       className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-300"

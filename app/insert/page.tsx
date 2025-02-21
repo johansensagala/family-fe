@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createItem } from '../../../services/itemService';
+import { createItem } from '../../services/itemService';
 
 export default function InsertItemPage() {
   const [name, setName] = useState('');
@@ -18,7 +18,7 @@ export default function InsertItemPage() {
       setDescription('');
       setPrice(0);
     } catch (error) {
-      setError('Gagal membuat item' + error);
+      setError('Gagal membuat item: ' + error);
     }
   };
 
