@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { getGamesById } from '../../../services/gameService';
 
 interface Answer {
@@ -30,31 +30,49 @@ interface AnswerRowProps {
 function AnswerRow({ answer, index, multiplier = 1, onScoreChange }: AnswerRowProps) {
   const [revealed, setRevealed] = useState(false);
 
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+        if (!event.altKey) return; // Hanya lanjut jika tombol Ctrl ditekan
+
+        if (event.key === String(index + 1)) {
+            handleClick();
+        }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => {
+        window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [index]); // Dependency memastikan event listener hanya berjalan sesuai `index`
+
   const handleClick = () => {
-    const audioFile = index === 0 ? '/sounds/top-survey.mp3' : '/sounds/correct.mp3';
-    const audio = new Audio(audioFile);
-    audio.currentTime = 0;
-    audio.play();
-    setRevealed(true);
-    onScoreChange(answer.poin * multiplier);
-  };
+    setRevealed((prevRevealed) => {
+        if (!prevRevealed) {
+            const audioFile = index === 0 ? "/sounds/top-survey.mp3" : "/sounds/correct.mp3";
+            const audio = new Audio(audioFile);
+            audio.currentTime = 0;
+            audio.play();
+            onScoreChange(answer.poin * multiplier);
+        }
+        return true; // Pastikan revealed diubah ke true
+    });
+};
 
   return (
-    <div 
-      key={answer.id || index} 
-      className="bg-blue-700 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer"
-      onClick={handleClick}
-    >
-      <span className="text-xl font-bold">{index + 1}</span>
-      <span className="text-lg font-semibold">{revealed ? answer.answer : ''}</span>
-      <span className="text-xl font-bold flex items-center justify-center w-10 h-10 bg-yellow-400 text-blue-900 rounded-full">
-        {revealed ? (answer.poin * multiplier || '-') : ''}
-      </span>
-    </div>
+      <div
+          className="bg-blue-700 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer"
+          onClick={handleClick}
+      >
+          <span className="text-xl font-bold">{index + 1}</span>
+          <span className="text-lg font-semibold">{revealed ? answer.answer : ""}</span>
+          <span className="text-xl font-bold flex items-center justify-center w-10 h-10 bg-yellow-400 text-blue-900 rounded-full">
+              {revealed ? answer.poin || "-" : ""}
+          </span>
+      </div>
   );
 }
 
-export default function Family100Game() {
+export default function Family100Game({ params }: { params: { game_id: string } }) {
   const [game, setGame] = useState<Game | null>(null);
   const [activeTab, setActiveTab] = useState<number | string>(1);
   const [showIncorrect, setShowIncorrect] = useState(false);
@@ -72,16 +90,28 @@ export default function Family100Game() {
   const [clickedScores, setClickedScores] = useState<Record<string, boolean>>({});
 
   // Timer states
-  const initialTime = 20;
+  const initialTime1 = 25;
+  const initialTime2 = 30;
+
+  const initialTime = 100;
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const [isRunning, setIsRunning] = useState(false);
+
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnswered, setIsAnswered] = useState(false);
 
   // Ref untuk audio background
   const bgAudioRef1 = useRef<HTMLAudioElement | null>(null);
   const bgAudioRef2 = useRef<HTMLAudioElement | null>(null);
   
-  const game_id = 1;
+  const { game_id } = use(params);
+  
   const totalFinalScore = finalScores.reduce((acc, curr) => acc + Number(curr || 0), 0);
+
+  const isFinalRound = activeTab === 'final';
+  const isTimer25 = activeTab === 'timer1';
+  const isTimer30 = activeTab === 'timer2';
+  const isBlank = activeTab === 'blank';
 
   const fetchGame = async () => {
     if (game_id) {
@@ -90,9 +120,20 @@ export default function Family100Game() {
     }
   };
 
+  const handleKeyPress = (event) => {
+    const key = parseInt(event.key, 10);
+    if (!isNaN(key)) {
+        setCurrentRound(key);
+    }
+  };
+
   useEffect(() => {
     fetchGame();
   }, [game_id]);
+
+  useEffect(() => {
+    setTempFinalAnswer(tempFinalAnswer);
+  }, [tempFinalAnswer]);
 
   // Setup background audio (hanya sekali)
   useEffect(() => {
@@ -107,7 +148,7 @@ export default function Family100Game() {
 
   // Timer countdown dan kontrol background music
   useEffect(() => {
-    if (activeTab !== 'timer' || !isRunning) return;
+    if ((activeTab !== 'timer1' && activeTab !== 'timer2') || !isRunning) return;
     if (timeLeft <= 0) {
       setIsRunning(false);
       // Hentikan kedua musik ketika timer 0
@@ -132,6 +173,71 @@ export default function Family100Game() {
     return () => clearInterval(timer);
   }, [activeTab, isRunning, timeLeft]);
   
+  useEffect(() => {
+    if (!isFinalRound) return;
+
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (event.altKey) {
+        console.log("alt")
+        let key = event.key;
+  
+        if (key >= "0" && key <= "9") {
+          if (key === "0") {
+            key = "10";
+          }
+  
+          const index = Number(key) - 1;
+          handleScoreClick(`finalScore-${index + 1}`);
+        }
+      }
+  
+      if (event.ctrlKey) {
+        console.log("ctrl");
+        let key = event.key;
+
+        if (key >= "0" && key <= "9") {
+            event.preventDefault();
+            
+            if (key === "0") key = "10";
+            const index = Number(key) - 1;
+            applyFinalAnswerIndex(index);
+        }
+      } 
+
+      if (event.shiftKey) {
+        console.log("shift");
+        let key = event.key;
+    
+        // Map keyCode untuk Shift+0-9 ke angka
+        const shiftKeyMap = {
+            '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6', '&': '7', '*': '8', '(': '9', ')': '0'
+        };
+    
+        // Jika key adalah simbol Shift + 0-9, ubah ke angka yang sesuai
+        if (shiftKeyMap[key]) {
+            key = shiftKeyMap[key];
+        }
+    
+        // Pastikan key adalah angka antara 0-9
+        if (key >= "0" && key <= "9") {
+            console.log("rerer");
+    
+            if (key === "0") {
+                key = "10"; // Kalau key adalah "0", set menjadi "10"
+            }
+    
+            const index = Number(key) - 1;
+            applyFinalScoreIndex(index);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => {
+        window.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [isFinalRound, tempFinalAnswer, tempFinalScore]);
+
   // Fungsi untuk start timer dan mainkan musik
   const handleStart = () => {
     if (bgAudioRef1.current) {
@@ -178,10 +284,13 @@ export default function Family100Game() {
   const handleIncorrect = () => {
     const audio = new Audio('/sounds/incorrect.mp3');
     audio.currentTime = 0;
-    audio.play();
+    audio.play(); 
     setShowIncorrect(true);
     setTimeout(() => setShowIncorrect(false), 3000);
-    setWrong(wrong + 1);
+
+    if (isVisible) {
+      setWrong(wrong + 1);
+    }
   };
 
   const handleSameAnswer = () => {
@@ -191,6 +300,10 @@ export default function Family100Game() {
   };
 
   const applyScore = () => {
+    const audio = new Audio('/sounds/correct.mp3');
+    audio.currentTime = 0;
+    audio.play();
+
     setTeam1Score(team1TempScore);
     setTeam2Score(team2TempScore);
   };
@@ -208,18 +321,63 @@ export default function Family100Game() {
   const applyFinalScore = () => {
     if (isFinalRound) {
       setFinalScores((prev) => [...prev, tempFinalScore]);
-      setTempFinalScore("");
     }
-    const audio = new Audio('/sounds/correct.mp3');
+    const audio = tempFinalScore != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/incorrect.mp3')
+    audio.currentTime = 0;
+    audio.play();
+
+    setTempFinalScore("");
+
+  };
+
+  const applyFinalAnswerIndex = (index: number) => {
+    console.log(index);
+    console.log("Before updating:", tempFinalAnswer);
+
+    if (isFinalRound) {
+        setFinalAnswers((prev) => {
+            console.log("Current tempFinalAnswer:", tempFinalAnswer);
+            const updatedAnswers = [...prev];
+            updatedAnswers[index] = tempFinalAnswer; // Update berdasarkan index
+            return updatedAnswers;
+        });
+
+        // Tunggu sampai finalAnswers diperbarui, baru reset tempFinalAnswer
+        setTimeout(() => setTempFinalAnswer(""), 0);
+    }
+
+    const audio = new Audio('/sounds/magic.mp3');
     audio.currentTime = 0;
     audio.play();
   };
 
+  const applyFinalScoreIndex = (index: number) => {
+    console.log("Before updating scores:", tempFinalScore);
+
+    if (isFinalRound) {
+        setFinalScores((prevScores) => {
+            console.log("Current tempFinalScore:", tempFinalScore);
+            const updatedScores = [...prevScores];
+            updatedScores[index] = tempFinalScore; // Update the score based on index
+            return updatedScores;
+        });
+    }
+
+    const audio = tempFinalScore != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/incorrect.mp3')
+    audio.currentTime = 0;
+    audio.play();
+
+    // Reset tempFinalScore after updating finalScores
+    setTimeout(() => setTempFinalScore(""), 0);
+  };
+
   const onScoreChange = (score: number): void => {
-    if (team1TempScore) {
-      setTeam1TotalScore((prevScore: number) => prevScore + score);
-    } else {
-      setTeam2TotalScore((prevScore: number) => prevScore + score);
+    if (wrong < 3) {
+      if (team1TempScore) {
+        setTeam1TotalScore((prevScore: number) => prevScore + score);
+      } else {
+        setTeam2TotalScore((prevScore: number) => prevScore + score);
+      }
     }
   };
 
@@ -231,11 +389,7 @@ export default function Family100Game() {
 
   if (!game) return <div>Loading...</div>;
 
-  const isFinalRound = activeTab === 'final';
-  const isTimer = activeTab === 'timer';
-  const isBlank = activeTab === 'blank';
-
-  const currentRound = !isFinalRound && !isTimer && game.rounds[Number(activeTab) - 1];
+  const currentRound = !isFinalRound && !isTimer25 && !isTimer30 && game.rounds[Number(activeTab) - 1];
 
   let content;
 
@@ -291,13 +445,13 @@ export default function Family100Game() {
           </div>
         </div>
         <div className="text-center mb-6">
-          <span className="inline-block text-xl font-semibold bg-yellow-400 rounded-full px-4 py-2 mt-8">
+          <span className="inline-block text-xl text-blue-900 font-semibold bg-white rounded-full px-4 py-2 mt-8">
             {totalFinalScore}
           </span>
         </div>
       </div>
     );
-  } else if (isTimer) {
+  } else if (isTimer25 || isTimer30) {
     content = (
       <div id="game-container" className="relative ml-56 max-w-3xl w-full bg-blue-800 text-white p-4 rounded-xl shadow-lg">
         <div className="flex flex-col items-center my-16 space-y-8">
@@ -356,7 +510,11 @@ export default function Family100Game() {
           </h1>
         </div>
         <div className="text-center mb-6">
-          <h2 className="text-xl font-semibold">{currentRound.question.question}</h2>
+            {isVisible && (
+                <h2 className="text-xl font-semibold mt-2">
+                    {currentRound.question.question}
+                </h2>
+            )}
         </div>
         <div className="space-y-2">
           {currentRound.question.answers.map((answer, index) => (
@@ -384,7 +542,7 @@ export default function Family100Game() {
   }
 
   return (
-    <div className="relative bg-blue-900 min-h-screen flex items-center justify-center">
+    <div className="relative bg-blue-500 min-h-screen flex items-center justify-center">
       <div className="controller absolute top-0 left-0 h-full w-40 bg-blue-700 text-white p-4 flex-1 overflow-y-auto">
         <h2 className="text-2xl font-semibold text-center mb-6">Tabs</h2>
         <ul className="space-y-4">
@@ -397,6 +555,12 @@ export default function Family100Game() {
                   setWrong(0);
                   setTeam1TotalScore(0);
                   setTeam2TotalScore(0);
+                  setIsVisible(false);
+                  setIsAnswered(false);
+
+                  const audio = new Audio('/sounds/coin.mp3');
+                  audio.currentTime = 0;
+                  audio.play();
                 }}
               >
                 {`Round ${index + 1}`}
@@ -413,21 +577,36 @@ export default function Family100Game() {
           </li>
           <li>
             <button
-              className={`w-full py-2 text-lg font-semibold ${isTimer ? 'bg-yellow-400' : 'bg-blue-800'} rounded-lg`}
+              className={`w-full py-2 text-lg font-semibold ${isTimer25 ? 'bg-yellow-400' : 'bg-blue-800'} rounded-lg`}
               onClick={() => {
                 handleSound("timer")
-                setActiveTab('timer');
-                setTimeLeft(initialTime);
+                setActiveTab('timer1');
+                setTimeLeft(initialTime1);
                 setIsRunning(false);
               }}
             >
-              Timer
+              Timer {initialTime1}
+            </button>
+          </li>
+          <li>
+            <button
+              className={`w-full py-2 text-lg font-semibold ${isTimer30 ? 'bg-yellow-400' : 'bg-blue-800'} rounded-lg`}
+              onClick={() => {
+                handleSound("timer")
+                setActiveTab('timer2');
+                setTimeLeft(initialTime2);
+                setIsRunning(false);
+              }}
+            >
+              Timer {initialTime2}
             </button>
           </li>
           <li>
             <button
               className={`w-full py-2 text-lg font-semibold ${isBlank ? 'bg-yellow-400' : 'bg-blue-800'} rounded-lg`}
-              onClick={() => setActiveTab('blank')}
+              onClick={() => {
+                setActiveTab('blank');
+              }}
             >
               Blank
             </button>
@@ -439,6 +618,26 @@ export default function Family100Game() {
           onClick={handleIncorrect}
         >
           Incorrect ❌
+        </button>
+        <button 
+          className="w-full py-2 bg-red-400 text-white font-bold rounded-lg mt-2"
+          onClick={() => setIsVisible(!isVisible)}
+        >
+          Question V
+        </button>
+
+        <label className="block text-lg mt-6">Timer</label>
+        <button 
+          className="w-full py-2 bg-green-600 text-white font-bold rounded-lg mt-2"
+          onClick={handleStart}
+        >
+          Start Timer
+        </button>
+        <button 
+          className="w-full py-2 bg-red-600 text-white font-bold rounded-lg mt-2"
+          onClick={handleReset}
+        >
+          Stop Timer
         </button>
 
         <button 
@@ -511,20 +710,6 @@ export default function Family100Game() {
           Apply
         </button>
 
-        <label className="block text-lg mt-6">Timer</label>
-        <button 
-          className="w-full py-2 bg-green-600 text-white font-bold rounded-lg mt-2"
-          onClick={handleStart}
-        >
-          Start Timer
-        </button>
-        <button 
-          className="w-full py-2 bg-red-600 text-white font-bold rounded-lg mt-2"
-          onClick={handleReset}
-        >
-          Stop Timer
-        </button>
-
         <label className="block text-lg mt-6">Sound Effect</label>
         <button 
           className="w-full py-2 bg-blue-400 text-white font-bold rounded-lg mt-2"
@@ -543,6 +728,18 @@ export default function Family100Game() {
           onClick={() => handleSound("end")}
         >
           End
+        </button>
+        <button 
+          className="w-full py-2 bg-blue-400 text-white font-bold rounded-lg mt-2"
+          onClick={() => handleSound("applause")}
+        >
+          Applause
+        </button>
+        <button 
+          className="w-full py-2 bg-blue-400 text-white font-bold rounded-lg mt-2"
+          onClick={() => handleSound("heartbeat")}
+        >
+          Heart Beat
         </button>
 
       </div>
