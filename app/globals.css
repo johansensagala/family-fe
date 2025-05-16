@@ -19,3 +19,41 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media screen and (min-width: 1920px) {
+  .hide-on-projector {
+      display: none !important;
+  }
+}
+
+/* Menyembunyikan error bubble Turbopack */
+div[role="alert"][style*="background-color"] {
+    display: none !important;
+}
+
+nextjs-portal {
+  display: none;
+}
+
+@keyframes surprisePop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(255, 215, 0, 0.8);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+  }
+}
+
+.surprise-effect {
+  animation: surprisePop 0.8s ease-out;
+  background: linear-gradient(135deg, #fff700, #ff8c00);
+  color: #1a1a1a;
+}
