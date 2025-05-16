@@ -1,20 +1,20 @@
 export const getAllGames = async () => {
-    const res = await fetch('http://192.168.43.213:5000/games');
+    const res = await fetch('http://localhost:5000/games');
     return await res.json();
 };
 
 export const getGamesById = async (id: string) => {
-    const res = await fetch(`http://192.168.43.213:5000/games/${id}`);
+    const res = await fetch(`http://localhost:5000/games/${id}`);
     return await res.json();
 };
 
 export const getItemById = async (id: string) => {
-    const res = await fetch(`http://192.168.43.213:5000/items/${id}`);
+    const res = await fetch(`http://localhost:5000/items/${id}`);
     return await res.json();
 };
 
 export const updateItem = async (id: string, item: any) => {
-    const res = await fetch(`http://192.168.43.213:5000/items/${id}`, {
+    const res = await fetch(`http://localhost:5000/items/${id}`, {
         method: 'PUT',
         body: JSON.stringify(item),
         headers: { 'Content-Type': 'application/json' },
@@ -23,7 +23,7 @@ export const updateItem = async (id: string, item: any) => {
 };
 
 export async function createItem(item: { name: string; description: string }) {
-    const response = await fetch('http://192.168.43.213:5000/items', {
+    const response = await fetch('http://localhost:5000/items', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -1049,6 +1049,12 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         >
           Special Answer
         </button>
+        <button 
+          className="w-full py-2 bg-blue-400 text-white font-bold rounded-lg mt-2"
+          onClick={() => handleSound("riser")}
+        >
+          Risen
+        </button>
 
       </div>
     </div>
