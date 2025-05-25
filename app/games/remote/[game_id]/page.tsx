@@ -77,9 +77,11 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange }: AnswerRowPr
           onClick={handleClick}
       >
           <span className="text-xl font-bold">{index + 1}</span>
-          <span className="text-3xl font-semibold">{revealed ? answer.answer : ""}</span>
-          <span className="text-xl font-bold flex items-center justify-center w-10 h-10 bg-gray-400 text-blue-900 rounded-full">
-              {revealed ? answer.poin || "-" : ""}
+          <span className={`text-3xl font-semibold ${!revealed ? 'text-gray-900' : ''}`}>
+              {answer.answer}
+          </span>
+          <span className={`text-xl font-bold flex items-center justify-center w-10 h-10 bg-gray-400 ${!revealed ? 'text-gray-900' : 'text-blue-900'} rounded-full`}>
+              {answer.poin}
           </span>
       </div>
   );
@@ -695,11 +697,11 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     </h1>
   </div>
   <div className="text-center mb-6">
-    {isVisible && (
+    {/* {isVisible && ( */}
       <h2 className="text-3xl font-semibold mt-2">
         {currentRound.question.question}
       </h2>
-    )}
+    {/* )} */}
   </div>
   <div className="space-y-2">
     {currentRound.question.answers.map((answer, index) => (
