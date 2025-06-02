@@ -837,7 +837,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
               onClick={() => {
                 setActiveTabSingleSO();
                 setActiveTab('single');
-                handleSound('preparation')
+                handleSound('preparation-2')
               }}
             >
               SINGLE POINT
@@ -849,7 +849,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
               onClick={() => {
                 setActiveTabDoubleSO();
                 setActiveTab('double');
-                handleSound('preparation')
+                handleSound('preparation-2')
               }}
             >
               DOUBLE POINT
