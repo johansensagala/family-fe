@@ -52,8 +52,42 @@ nextjs-portal {
   }
 }
 
-.surprise-effect {
+.first-surprise-effect {
   animation: surprisePop 0.8s ease-out;
   background: linear-gradient(135deg, #fff700, #ff8c00);
   color: #1a1a1a;
+}
+
+.surprise-effect {
+  /* animation: surprisePop 0.8s ease-out; */
+  background: linear-gradient(135deg, #fff700, #ff8c00);
+  color: #1a1a1a;
+}
+
+.warning-effect {
+  animation: warningFlash 0.5s ease forwards;
+}
+
+@keyframes warningFlash {
+  0% {
+    background-color: transparent;
+  }
+  16.6% {
+    background-color: #ff4d4d;
+  }
+  33.3% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: #ff4d4d;
+  }
+  66.6% {
+    background-color: transparent;
+  }
+  83.3% {
+    background-color: #ff4d4d;
+  }
+  100% {
+    background-color: transparent;
+  }
 }

@@ -32,15 +32,17 @@ interface AnswerRowProps {
   index: number;
   multiplier?: number;
   onScoreChange: (score: number) => void;
+  onIncorrectReveal?: () => void; // ✅ Tambahkan ini untuk menangani klik salah
 }
 
-function AnswerRow({ answer, index, multiplier = 1, onScoreChange }: AnswerRowProps) {
+function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectReveal }: AnswerRowProps) {
   const [revealed, setRevealed] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [playFirstSurpriseEffect, setPlayFirstSurpriseEffect] = useState(false);
 
-  // Menambahkan event listener untuk key press
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (!event.altKey) return; // Hanya lanjut jika tombol Alt ditekan
+      if (!event.altKey) return;
 
       if (event.key === String(index + 1)) {
         handleClick();
@@ -53,50 +55,81 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange }: AnswerRowPr
     };
   }, [index]);
 
-  // Menambahkan socket listener di dalam useEffect
   useEffect(() => {
     const socket = io(undefined, {
       path: "/api/socket",
     });
 
-    // Mendengarkan event "set-reveal-answer" dan memanggil handleClick berdasarkan index yang diterima
     socket.on("set-reveal-answer", (indexSO: number) => {
-      if (index === indexSO) { // Cek apakah index yang diterima sama dengan index komponen ini
-        handleClick(); // Memanggil handleClick jika index cocok
+      if (index === indexSO) {
+        handleClick();
       }
     });
 
-    // Cleanup socket listener saat komponen unmount
     return () => {
       socket.disconnect();
     };
-  }, [index]); // pastikan useEffect dijalankan ulang ketika index berubah
+  }, [index]);
 
   const handleClick = () => {
     setRevealed((prevRevealed) => {
       if (!prevRevealed) {
-        const audioFile = answer.isSurprise ? "/sounds/siren.mp3" : index === 0 ? "/sounds/top-survey.mp3" : "/sounds/correct.mp3";
+        const audioFile = answer.isSurprise
+          ? "/sounds/siren.mp3"
+          : index === 0
+          ? "/sounds/top-survey-2.mp3"
+          : "/sounds/correct-2.mp3";
         const audio = new Audio(audioFile);
         audio.currentTime = 0;
         audio.play();
+
         if (answer.isSurprise) {
-          const audio = new Audio("/sounds/cashier.mp3");
-          audio.currentTime = 0.2;
-          audio.play();
+          const audio2 = new Audio("/sounds/cashier.mp3");
+          audio2.currentTime = 0.2;
+          audio2.play();
+
+          // Trigger efek khusus pertama kali
+          setPlayFirstSurpriseEffect(true);
+          setTimeout(() => {
+            setPlayFirstSurpriseEffect(false);
+          }, 800); // Durasi animasi efek pertama
         }
+
         onScoreChange(answer.poin * multiplier);
+      } else {
+        // Sudah terbuka, artinya salah tekan
+        const audio = new Audio("/sounds/wrong.mp3");
+        audio.currentTime = 0;
+        audio.play();
+
+        // Trigger efek visual
+        setShowWarning(true);
+        setTimeout(() => {
+          setShowWarning(false);
+        }, 500);
+
+        if (onIncorrectReveal) {
+          onIncorrectReveal();
+        }
       }
-      return true; // Pastikan revealed diubah ke true
+
+      return true;
     });
   };
 
+  // Tentukan kelas CSS berdasarkan kondisi
+  let classNames = "bg-gray-700 flex items-center justify-between px-4 py-2 rounded-lg shadow cursor-pointer transition-transform duration-300";
+
+  if (showWarning) {
+    classNames += " warning-effect";
+  } else if (playFirstSurpriseEffect) {
+    classNames += " first-surprise-effect";
+  } else if (revealed && answer.isSurprise) {
+    classNames += " surprise-effect";
+  }
+
   return (
-    <div
-      className={`bg-gray-700 flex items-center justify-between px-4 py-2 rounded-lg shadow cursor-pointer transition-transform duration-300
-        ${revealed && answer.isSurprise ? "surprise-effect" : ""}
-      `}
-      onClick={handleClick}
-    >
+    <div className={classNames} onClick={handleClick}>
       <span className="text-3xl font-bold">{index + 1}</span>
       <span className="text-3xl font-semibold">
         {revealed ? answer.answer : ""}
@@ -266,15 +299,17 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     });
 
     socket.on("handle-incorrect", (data: any) => {
-      const audio = new Audio('/sounds/wrong.mp3');
-      audio.currentTime = 0;
-      audio.play();
-      setShowIncorrect(true);
-      setTimeout(() => setShowIncorrect(false), 3000);
+      // const audio = new Audio('/sounds/wrong.mp3');
+      // audio.currentTime = 0;
+      // audio.play();
+      // setShowIncorrect(true);
+      // setTimeout(() => setShowIncorrect(false), 3000);
   
-      if (isVisibleRef.current) {
-        setWrong(wrongRef.current + 1);
-      }
+      // if (isVisibleRef.current) {
+      //   setWrong(wrongRef.current + 1);
+      // }
+
+      handleIncorrectReveal();
     });
 
     socket.on("set-question-visible", (data: any) => {
@@ -320,17 +355,17 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     socket.on("set-active-tab-final", (data: any) => {
       activeTabRef.current = 'final';
       setActiveTab('final');
-      handleSound('coin');
+      handleSound('show-final-answer');
     });
 
     socket.on("set-active-tab-single", (data: any) => {
       setActiveTab('single');
-      handleSound('preparation');
+      handleSound('preparation-2');
     });
 
     socket.on("set-active-tab-double", (data: any) => {
       setActiveTab('double');
-      handleSound('preparation');
+      handleSound('preparation-2');
     });
 
     socket.on("set-active-tab-main", (data: any) => {
@@ -385,7 +420,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     socket.on("set-score", (data: any) => {
       const { team1TempScoreSO, team2TempScoreSO } = data;
 
-      const audio = new Audio('/sounds/correct.mp3');
+      const audio = new Audio('/sounds/correct-2.mp3');
       audio.currentTime = 0;
       audio.play();
   
@@ -480,11 +515,11 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
   // Setup background audio (hanya sekali)
   useEffect(() => {
-    bgAudioRef1.current = new Audio('/sounds/timer-background.mp3');
+    bgAudioRef1.current = new Audio('/sounds/timer-music-2.mp3');
     bgAudioRef1.current.loop = true;
     bgAudioRef1.current.volume = 0.2; // set volume ke 50%
 
-    bgAudioRef2.current = new Audio('/sounds/timer-music.mp3');
+    bgAudioRef2.current = new Audio('/sounds/timer-music-2.mp3');
     bgAudioRef2.current.loop = true;
     bgAudioRef2.current.volume = 0.2; // set volume ke 50%
   }, []);
@@ -614,7 +649,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       [id]: !prev[id],
     }));
 
-    const audio = new Audio('/sounds/top-survey.mp3');
+    const audio = new Audio('/sounds/top-survey-2.mp3');
     audio.currentTime = 0;
     audio.play();
   };
@@ -729,6 +764,19 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     audioCashier.currentTime = 0.2;
     audioCashier.play();
   }
+
+  const handleIncorrectReveal = () => {
+    const audio = new Audio('/sounds/wrong.mp3');
+    audio.currentTime = 0;
+    audio.play();
+
+    setShowIncorrect(true);
+    setTimeout(() => setShowIncorrect(false), 3000);
+
+    if (isVisibleRef.current) {
+      setWrong(wrongRef.current + 1);
+    }
+  };
 
   if (!game) return <div>Loading...</div>;
 
@@ -958,6 +1006,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           index={index}
           multiplier={currentRound.type === 'DOUBLE' ? 2 : 1}
           onScoreChange={onScoreChange}
+          onIncorrectReveal={handleIncorrectReveal}
         />
       </motion.div>
     ))}
