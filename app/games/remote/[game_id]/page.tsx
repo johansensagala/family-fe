@@ -824,7 +824,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                 {
                   setActiveTabFinalSO();
                   setActiveTab('final');
-                  handleSound('coin');
+                  handleSound('show-final-answer');
                 }
               } 
             >
@@ -1026,6 +1026,12 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           onClick={() => handleSound("preparation-2")}
         >
           Preparation 2
+        </button>
+        <button 
+          className="w-full py-2 bg-blue-400 text-white font-bold rounded-lg mt-2"
+          onClick={() => handleSound("preparation-3")}
+        >
+          Preparation 3
         </button>
         <button 
           className="w-full py-2 bg-blue-400 text-white font-bold rounded-lg mt-2"
