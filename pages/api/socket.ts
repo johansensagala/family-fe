@@ -34,6 +34,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
                 socket.broadcast.emit("set-question-visible", data);
             });
 
+            socket.on("set-active-player", (data) => {
+                socket.broadcast.emit("set-active-player", data);
+            });
+
             socket.on("set-active-tab-blank", (data) => {
                 socket.broadcast.emit("set-active-tab-blank", data);
             });

@@ -92,6 +92,8 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const [activeTab, setActiveTab] = useState<number | string>(1);
   const [showIncorrect, setShowIncorrect] = useState(false);
   const [wrong, setWrong] = useState(0);
+
+  const [activePlayer, setActivePlayer] = useState("L");
   const [team1TempScore, setTeam1TempScore] = useState(0);
   const [team2TempScore, setTeam2TempScore] = useState(0);
   const [team1Score, setTeam1Score] = useState(0);
@@ -324,6 +326,12 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     socket.emit("handle-incorrect", null);
   };
 
+  const setActivePlayerWithRemote = (activePlayer) => {
+    setActivePlayer(activePlayer);
+
+    socket.emit("set-active-player", activePlayer);
+  }
+
   const setQuestionVisibleSO = () => {
     socket.emit("set-question-visible", null);
   }
@@ -425,7 +433,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     if (isFinalRound) {
       setFinalScores((prev) => [...prev, tempFinalScore]);
     }
-    const audio = tempFinalScore != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/wrong.mp3')
+    const audio = tempFinalScore != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/wrong-2.mp3')
     audio.currentTime = 0;
     audio.play();
 
@@ -768,6 +776,16 @@ export default function Family100Game({ params }: { params: { game_id: string } 
             }
             >
             Question V
+          </button>
+          <button 
+            className={`w-full py-2 text-white font-bold rounded-lg mt-2 ${
+              activePlayer === "L" ? "bg-red-500" : "bg-blue-500"
+            }`}
+            onClick={() => {
+              setActivePlayerWithRemote(activePlayer === "L" ? "R" : "L");
+            }}
+          >
+            {activePlayer === "L" ? "LEFT" : "RIGHT"}
           </button>
         </div>
 

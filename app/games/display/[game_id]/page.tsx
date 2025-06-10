@@ -162,6 +162,12 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     wrongRef.current = wrong;
   }, [wrong]);
 
+  const [activePlayer, setActivePlayer] = useState("L");
+  const activePlayerRef = useRef(activePlayer);
+  useEffect(() => {
+    activePlayerRef.current = activePlayer;
+  }, [activePlayer]);
+
   const [team1TempScore, setTeam1TempScore] = useState(0);
   const [team2TempScore, setTeam2TempScore] = useState(0);
   const [team1Score, setTeam1Score] = useState(0);
@@ -316,6 +322,10 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       setIsVisible(!isVisibleRef.current);
     });
 
+    socket.on("set-active-player", (activePlayer) => {
+      setActivePlayer(activePlayer);
+    });
+
     socket.on("set-active-tab-blank", (data: any) => {
       setActiveTab('blank');
     });
@@ -420,7 +430,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     socket.on("set-score", (data: any) => {
       const { team1TempScoreSO, team2TempScoreSO } = data;
 
-      const audio = new Audio('/sounds/correct-2.mp3');
+      const audio = new Audio('/sounds/correct.mp3');
       audio.currentTime = 0;
       audio.play();
   
@@ -465,7 +475,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         });
       }
 
-      const audio = tempFinalScoreSO != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/wrong.mp3')
+      const audio = tempFinalScoreSO != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/wrong-2.mp3')
       audio.currentTime = 0;
       audio.play();
 
@@ -788,7 +798,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     content = (
       <motion.div
         id="game-container"
-        className="text-3xl relative mx-auto max-w-3xl w-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 text-white p-4 py-8 rounded-lg shadow-lg"
+        className="text-3xl relative mx-auto max-w-4xl w-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 text-white p-4 py-8 rounded-lg shadow-lg"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
@@ -960,18 +970,35 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     </div>
   </div>
   <div className="absolute left-0 transform -translate-x-[100%]">
-    {wrong > 0 && (
+    {((wrong > 0 && activePlayer == "L") || wrong > 3) && (
       <div className="absolute top-40 right-2 transform -translate-x-1/2 -translate-y-1/2 text-6xl text-red-500 font-bold">
         ❌
       </div>
     )}
-    {wrong > 1 && (
+    {wrong > 1 && activePlayer == "L" && (
       <div className="absolute top-60 right-2 transform -translate-x-1/2 -translate-y-1/2 text-6xl text-red-500 font-bold">
         ❌
       </div>
     )}
-    {wrong > 2 && (
+    {wrong > 2 && activePlayer == "L" && (
       <div className="absolute top-80 right-2 transform -translate-x-1/2 -translate-y-1/2 text-6xl text-red-500 font-bold">
+        ❌
+      </div>
+    )}
+  </div>
+  <div className="absolute right-0 transform translate-x-[100%]">
+    {((wrong > 0 && activePlayer != "L") || wrong > 3) && (
+      <div className="absolute top-40 left-2 transform translate-x-1/2 -translate-y-1/2 text-6xl text-red-500 font-bold">
+        ❌
+      </div>
+    )}
+    {wrong > 1 && activePlayer != "L" && (
+      <div className="absolute top-60 left-2 transform translate-x-1/2 -translate-y-1/2 text-6xl text-red-500 font-bold">
+        ❌
+      </div>
+    )}
+    {wrong > 2 && activePlayer != "L" && (
+      <div className="absolute top-80 left-2 transform translate-x-1/2 -translate-y-1/2 text-6xl text-red-500 font-bold">
         ❌
       </div>
     )}
