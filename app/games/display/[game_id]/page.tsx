@@ -39,6 +39,7 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
   const [revealed, setRevealed] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [playFirstSurpriseEffect, setPlayFirstSurpriseEffect] = useState(false);
+  const [showRevealEffect, setShowRevealEffect] = useState(false);
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -93,6 +94,10 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
           setTimeout(() => {
             setPlayFirstSurpriseEffect(false);
           }, 800); // Durasi animasi efek pertama
+        } else {
+          // ✨ Tambah efek reveal biasa
+          setShowRevealEffect(true);
+          setTimeout(() => setShowRevealEffect(false), 400);
         }
 
         onScoreChange(answer.poin * multiplier);
@@ -131,9 +136,15 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
   return (
     <div className={classNames} onClick={handleClick}>
       <span className="text-3xl font-bold">{index + 1}</span>
-      <span className="text-3xl font-semibold">
+
+      <span
+        className={`text-3xl font-semibold transition-all duration-300 ${
+          revealed ? (showRevealEffect ? "reveal-effect" : "") : ""
+        }`}
+      >
         {revealed ? answer.answer : ""}
       </span>
+
       <span className="text-3xl font-bold flex items-center justify-center w-12 h-12 bg-gray-400 text-blue-900 rounded-md">
         {revealed ? answer.poin || "-" : ""}
       </span>
@@ -224,6 +235,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const isTimer30 = activeTab === 'timer2';
   const singlePoin = activeTab === 'single';
   const doublePoin = activeTab === 'double';
+  const bonusRound = activeTab === 'bonus';
   const isMain = activeTab === 'main';
   const isBlank = activeTab === 'blank';
 
@@ -318,6 +330,14 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       handleIncorrectReveal();
     });
 
+    socket.on("set-minus-wrong", (data: any) => {
+      setWrong(wrongRef.current - 1);
+    });
+
+    socket.on("set-plus-wrong", (data: any) => {
+      setWrong(wrongRef.current + 1);
+    });
+
     socket.on("set-question-visible", (data: any) => {
       setIsVisible(!isVisibleRef.current);
     });
@@ -375,6 +395,11 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
     socket.on("set-active-tab-double", (data: any) => {
       setActiveTab('double');
+      handleSound('preparation-2');
+    });
+
+    socket.on("set-active-tab-bonus", (data: any) => {
+      setActiveTab('bonus');
       handleSound('preparation-2');
     });
 
@@ -887,12 +912,16 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     content = (
       <motion.div
         id="game-container"
-        className="relative mx-auto max-w-3xl w-full text-center p-4 rounded-xl"
+        className="relative mx-auto max-w-3xl w-full text-center
+                  rounded-3xl overflow-hidden
+                  bg-gray-800"
         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <h1 className="shine-text m-0 text-[10rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+        <h1 className="shine-text m-0 text-[10rem] font-bold
+                      text-transparent bg-clip-text
+                      bg-gradient-to-r from-gray-600 via-gray-300 to-white">
           SINGLE POIN
         </h1>
       </motion.div>
@@ -901,13 +930,35 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     content = (
       <motion.div
         id="game-container"
-        className="relative mx-auto max-w-3xl w-full text-center p-4 rounded-xl"
+        className="relative mx-auto max-w-3xl w-full text-center
+                  rounded-3xl overflow-hidden
+                  bg-gray-800"
         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <h1 className="shine-text m-0 text-[10rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+        <h1 className="shine-text m-0 text-[10rem] font-bold
+                      text-transparent bg-clip-text
+                      bg-gradient-to-r from-gray-600 via-gray-300 to-white">
           DOUBLE POIN
+        </h1>
+      </motion.div>
+    );
+  } else if (bonusRound) {
+    content = (
+      <motion.div
+        id="game-container"
+        className="relative mx-auto max-w-3xl w-full text-center
+                  rounded-3xl overflow-hidden
+                  bg-gray-800"
+        initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      >
+        <h1 className="shine-text m-0 text-[10rem] font-bold
+                      text-transparent bg-clip-text
+                      bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+          BONUS ROUND
         </h1>
       </motion.div>
     );
@@ -1054,7 +1105,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   }
 
   return (
-<div className="relative bg-cover bg-center min-h-screen flex items-center justify-center"
+<div className="relative bg-cover bg-center min-h-screen flex items-center justify-center uppercase"
   style={{
     backgroundImage: "url('/background/black.webp')",
     backgroundSize: "100%",

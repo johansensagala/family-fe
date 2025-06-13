@@ -30,6 +30,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
                 socket.broadcast.emit("handle-incorrect", data);
             });
 
+            socket.on("set-minus-wrong", (data) => {
+                socket.broadcast.emit("set-minus-wrong", data);
+            });
+
+            socket.on("set-plus-wrong", (data) => {
+                socket.broadcast.emit("set-plus-wrong", data);
+            });
+
             socket.on("set-question-visible", (data) => {
                 socket.broadcast.emit("set-question-visible", data);
             });
@@ -56,6 +64,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
 
             socket.on("set-active-tab-double", (data) => {
                 socket.broadcast.emit("set-active-tab-double", data);
+            });
+
+            socket.on("set-active-tab-bonus", (data) => {
+                socket.broadcast.emit("set-active-tab-bonus", data);
             });
 
             socket.on("set-active-tab-main", (data) => {

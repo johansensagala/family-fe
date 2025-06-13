@@ -130,6 +130,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const isTimer30 = activeTab === 'timer2';
   const singlePoin = activeTab === 'single';
   const doublePoin = activeTab === 'double';
+  const bonusRound = activeTab === 'bonus';
   const isBlank = activeTab === 'blank';
   const isMain = activeTab === 'main';
 
@@ -326,6 +327,18 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     socket.emit("handle-incorrect", null);
   };
 
+  const handleMinusWrongSO = () => {
+    setWrong(wrong - 1);
+
+    socket.emit("set-minus-wrong", null);
+  }
+
+  const handlePlusWrongSO = () => {
+    setWrong(wrong + 1);
+
+    socket.emit("set-plus-wrong", null);
+  }
+
   const setActivePlayerWithRemote = (activePlayer) => {
     setActivePlayer(activePlayer);
 
@@ -354,6 +367,10 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
   const setActiveTabDoubleSO = () => {
     socket.emit("set-active-tab-double", null);
+  }
+
+  const setActiveTabBonusSO = () => {
+    socket.emit("set-active-tab-bonus", null);
   }
 
   const setActiveTabMainSO = () => {
@@ -533,7 +550,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           </div>
         )}
         <div className="text-center mb-6">
-          <h2 className="text-xl font-semibold">Final Round</h2>
+          <h2 className="text-xl font-semibold">Bonus Round</h2>
         </div>
         <div className="flex gap-4">
           <div className="flex flex-col w-1/2 space-y-2">
@@ -787,6 +804,23 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           >
             {activePlayer === "L" ? "LEFT" : "RIGHT"}
           </button>
+
+          <div className="mt-2 flex gap-2">
+            <button
+              className="flex-1 py-2 bg-yellow-500 text-white font-bold rounded-lg"
+              onClick={handleMinusWrongSO}
+            >
+              – Wrong
+            </button>
+
+            <button
+              className="flex-1 py-2 bg-yellow-600 text-white font-bold rounded-lg"
+              onClick={handlePlusWrongSO}
+            >
+              + Wrong
+            </button>
+          </div>
+
         </div>
 
         <ul className="space-y-4">
@@ -846,7 +880,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                 }
               } 
             >
-              Final Round
+              Bonus Round
             </button>
           </li>
           <li>
@@ -871,6 +905,18 @@ export default function Family100Game({ params }: { params: { game_id: string } 
               }}
             >
               DOUBLE POINT
+            </button>
+          </li>
+          <li>
+            <button
+              className={`w-full py-2 text-3xl font-semibold ${bonusRound ? 'bg-gray-400' : 'bg-blue-800'} rounded-lg`}
+              onClick={() => {
+                setActiveTabBonusSO();
+                setActiveTab('bonus');
+                handleSound('preparation-2')
+              }}
+            >
+              BONUS ROUND
             </button>
           </li>
           <li>

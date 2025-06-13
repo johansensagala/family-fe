@@ -29,3 +29,19 @@
         left: 125%;
     }
 }
+
+/* Tambahkan ke file CSS global atau module */
+.reveal-effect {
+  animation: revealAnim 0.4s ease-out;
+}
+
+@keyframes revealAnim {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
