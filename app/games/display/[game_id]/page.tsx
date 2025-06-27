@@ -40,6 +40,31 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
   const [showWarning, setShowWarning] = useState(false);
   const [playFirstSurpriseEffect, setPlayFirstSurpriseEffect] = useState(false);
   const [showRevealEffect, setShowRevealEffect] = useState(false);
+  const [scaledDown, setScaledDown] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+
+  const fitText = () => {
+    if (!revealed) return;
+    const container = containerRef.current;
+    const text = textRef.current;
+    if (!container || !text) return;
+
+    const scale = Math.min(1, container.clientWidth / text.scrollWidth);
+    text.style.transform = `scaleX(${scale})`;
+
+    // < 0.999 untuk toleransi floating-point
+    setScaledDown(scale < 0.999);
+  };
+
+  useEffect(() => {
+    fitText();
+    window.addEventListener("resize", fitText);
+    return () => {
+      window.removeEventListener("resize", fitText);
+    };
+  }, [revealed, answer.answer]);
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -137,13 +162,16 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
     <div className={classNames} onClick={handleClick}>
       <span className="text-3xl font-bold">{index + 1}</span>
 
-      <span
-        className={`text-3xl font-semibold transition-all duration-300 ${
-          revealed ? (showRevealEffect ? "reveal-effect" : "") : ""
-        }`}
-      >
-        {revealed ? answer.answer : ""}
-      </span>
+      <div ref={containerRef} className="flex-1 flex justify-center px-4 overflow-hidden">
+        <span
+          ref={textRef}
+          className={`inline-block px-20 text-3xl font-semibold transition-all duration-300 whitespace-nowrap origin-center ${
+            revealed && showRevealEffect && !scaledDown ? "reveal-effect" : ""
+          }`}
+        >
+          {revealed ? answer.answer : ""}
+        </span>
+      </div>
 
       <span className="text-3xl font-bold flex items-center justify-center w-12 h-12 bg-gray-400 text-blue-900 rounded-md">
         {revealed ? answer.poin || "-" : ""}
@@ -358,8 +386,6 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       setIsVisible(false);
       setIsAnswered(false);
 
-      console.log(activeTab);
-      console.log(isVisible);
       const playWithDelay = (audioPath, delay) => {
         const audio = new Audio(audioPath);
         audio.currentTime = 0;
@@ -367,17 +393,19 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           audio.play();
         }, delay);
       };
-      
+
+      // Delay kemunculan container (harus sama seperti BASE_DELAY di visual)
+      const BASE_DELAY = 1000;         // 0.8 detik
+      const STAGGER_TIME = 100;        // 0.08 detik antar AnswerRow
+
       playWithDelay('/sounds/start.mp3', 0);
-      
+
       const flipCount = gameRef.current?.rounds[index - 1]?.question?.answers?.length;
-      
-      console.log(game)
-      console.log(flipCount);
 
       if (flipCount) {
         for (let i = 0; i < flipCount; i++) {
-          playWithDelay('/sounds/flip.mp3', (i + 1) * 180);
+          const delay = BASE_DELAY + i * STAGGER_TIME;
+          playWithDelay('/sounds/flip.mp3', delay);
         }
       }
     });
@@ -586,6 +614,12 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     return () => clearInterval(timer);
   }, [activeTab, isRunning, timeLeft]);
   
+  useEffect(() => {
+    if (isFinalRound) {
+        fitText();
+    }
+  }, [isFinalRound]);
+
   useEffect(() => {
     if (!isFinalRound) return;
 
@@ -813,6 +847,34 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     }
   };
 
+  // 1️⃣ Ref untuk container dan teks
+  const answerRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [isScaled, setIsScaled] = useState<boolean[]>(Array(10).fill(false));
+
+  // 2️⃣ Fungsi fit text seperti sebelumnya
+  const fitText = () => {
+    const newScaled = [...isScaled]; // clone
+    for (let i = 0; i < 10; i++) {
+      const container = containerRefs.current[i];
+      const text = answerRefs.current[i];
+      if (!container || !text) continue;
+
+      const scale = Math.min(1, container.clientWidth / text.scrollWidth);
+      text.style.transform = `scaleX(${scale})`;
+      text.style.transformOrigin = "center";
+      newScaled[i] = scale < 0.999;
+    }
+    setIsScaled(newScaled); // update state
+  };
+
+  // 3️⃣ Jalankan saat finalAnswers berubah atau window resize
+  useEffect(() => {
+    fitText();
+    window.addEventListener("resize", fitText);
+    return () => window.removeEventListener("resize", fitText);
+  }, [finalAnswers]);
+
   if (!game) return <div>Loading...</div>;
 
   const currentRound = !isFinalRound && !isTimer25 && !isTimer30 && game.rounds[Number(activeTab) - 1];
@@ -820,6 +882,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   let content;
 
   if (isFinalRound) {
+
     content = (
       <motion.div
         id="game-container"
@@ -833,60 +896,87 @@ export default function Family100Game({ params }: { params: { game_id: string } 
             ❌
           </div>
         )} */}
-        <div className="flex gap-4">
-          <div className="flex flex-col w-1/2 space-y-2">
-            {Array.from({ length: 5 }, (_, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.2 }}
-              >
-                <div className="bg-gradient-to-r from-gray-700 to-gray-600 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer">
-                  <span
-                    id={`finalAnswer-${i + 1}`}
-                    className={`text-3xl font-semibold transition-opacity duration-500 ${finalAnswers[i] ? 'opacity-100' : 'opacity-0'}`}
-                  >
-                    {finalAnswers[i]}
-                  </span>
-                  <span
-                    id={`finalScore-${i + 1}`}
-                    className={getScoreClass(`finalScore-${i + 1}`)}
-                    onClick={() => handleScoreClick(`finalScore-${i + 1}`)}
-                  >
-                    {finalScores[i] || ''}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
+          <div className="flex gap-4">
+            <div className="flex flex-col w-1/2 space-y-2">
+              {Array.from({ length: 5 }, (_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: i * 0.2 }}
+                >
+                  <div className="bg-gradient-to-r from-gray-700 to-gray-600 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer">
+                    {/* Jawaban dengan fitText */}
+                    <div
+                      ref={(el) => (containerRefs.current[i] = el)}
+                      className={`flex-1 flex overflow-hidden ${
+                        isScaled[i] ? "justify-center" : "justify-start"
+                      }`}
+                    >
+                      <span
+                        ref={(el) => (answerRefs.current[i] = el)}
+                        id={`finalAnswer-${i + 1}`}
+                        className={`inline-block text-3xl pr-6 font-semibold transition-opacity duration-500 whitespace-nowrap ${
+                          finalAnswers[i] ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        {finalAnswers[i]}
+                      </span>
+                    </div>
+
+                    {/* Skor */}
+                    <span
+                      id={`finalScore-${i + 1}`}
+                      className={getScoreClass(`finalScore-${i + 1}`)}
+                      onClick={() => handleScoreClick(`finalScore-${i + 1}`)}
+                    >
+                      {finalScores[i] || ""}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="flex flex-col w-1/2 space-y-2">
+              {Array.from({ length: 5 }, (_, i) => (
+                <motion.div
+                  key={i + 5}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: (i + 5) * 0.2 }}
+                >
+                  <div className="bg-gradient-to-r from-gray-700 to-gray-600 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer">
+                    {/* Skor */}
+                    <span
+                      id={`finalScore-${i + 6}`}
+                      className={getScoreClass(`finalScore-${i + 6}`)}
+                      onClick={() => handleScoreClick(`finalScore-${i + 6}`)}
+                    >
+                      {finalScores[i + 5] || ""}
+                    </span>
+
+                    {/* Jawaban dengan fitText */}
+                    <div
+                      ref={(el) => (containerRefs.current[i + 5] = el)}
+                      className={`flex-1 flex overflow-hidden ${
+                        isScaled[i + 5] ? "justify-center" : "justify-end"
+                      }`}
+                    >
+                      <span
+                        ref={(el) => (answerRefs.current[i + 5] = el)}
+                        id={`finalAnswer-${i + 6}`}
+                        className={`inline-block text-3xl pl-6 font-semibold transition-opacity duration-500 whitespace-nowrap ${
+                          finalAnswers[i + 5] ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        {finalAnswers[i + 5]}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-col w-1/2 space-y-2">
-            {Array.from({ length: 5 }, (_, i) => (
-              <motion.div
-                key={i + 5}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: (i + 5) * 0.2 }}
-              >
-                <div className="bg-gradient-to-r from-gray-700 to-gray-600 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer">
-                  <span
-                    id={`finalScore-${i + 6}`}
-                    className={getScoreClass(`finalScore-${i + 6}`)}
-                    onClick={() => handleScoreClick(`finalScore-${i + 6}`)}
-                  >
-                    {finalScores[i + 5] || ''}
-                  </span>
-                  <span
-                    id={`finalAnswer-${i + 6}`}
-                    className={`text-3xl font-semibold transition-opacity duration-500 ${finalAnswers[i + 5] ? 'opacity-100' : 'opacity-0'}`}
-                  >
-                    {finalAnswers[i + 5]}
-                  </span>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
         <div className="text-center mb-6">
           <span className="inline-block text-4xl text-gray-900 font-semibold bg-white rounded-md px-4 py-2 mt-8">
             {totalFinalScore}
@@ -945,6 +1035,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       </motion.div>
     );
   } else if (bonusRound) {
+
     content = (
       <motion.div
         id="game-container"
@@ -994,6 +1085,9 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       </div>
     );
   } else if (currentRound) {
+    const BASE_DELAY   = 1;   // jeda 0,8 detik setelah container muncul
+    const STAGGER_TIME = 0.1;  // jeda antar-AnswerRow jadi lebih cepat
+
     content = (
       // <motion.div
         // initial={{ opacity: 0, y: 30, scale: 0.95 }}
@@ -1006,7 +1100,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   className="relative mx-auto max-w-3xl w-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 text-white p-4 rounded-lg shadow-lg"
   initial={{ opacity: 0, y: 50 }}
   animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.6, ease: "easeOut" }}
+  transition={{ duration: 1.0, ease: "easeOut" }}
 >
   <div className="absolute left-0 transform -translate-x-[200%]">
     <div className="bg-gradient-to-r from-gray-600 to-gray-500 p-4 rounded-lg shadow-lg text-center">
@@ -1077,7 +1171,10 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         key={answer.id || index}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: index * 0.2 }}
+        transition={{
+          duration: 0.3,                     // lebih singkat
+          delay: BASE_DELAY + index * STAGGER_TIME
+        }}
       >
         <AnswerRow
           answer={answer}
