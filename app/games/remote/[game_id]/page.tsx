@@ -116,6 +116,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
   const [isVisible, setIsVisible] = useState(false);
   const [isAnswered, setIsAnswered] = useState(false);
+  const [teamReminder, setTeamReminder] = useState(false);
 
   // Ref untuk audio background
   const bgAudioRef1 = useRef<HTMLAudioElement | null>(null);
@@ -794,12 +795,13 @@ export default function Family100Game({ params }: { params: { game_id: string } 
             >
             Question V
           </button>
-          <button 
+          <button
             className={`w-full py-2 text-white font-bold rounded-lg mt-2 ${
               activePlayer === "L" ? "bg-red-500" : "bg-blue-500"
-            }`}
+            } ${teamReminder ? "animate-blink" : ""}`}
             onClick={() => {
               setActivePlayerWithRemote(activePlayer === "L" ? "R" : "L");
+              setTeamReminder(false);
             }}
           >
             {activePlayer === "L" ? "LEFT" : "RIGHT"}
@@ -838,7 +840,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           {game.rounds.map((round, index) => (
             <li key={round.id}>
               <button
-                className={`w-full py-2 text-3xl font-semibold ${activeTab === index + 1 ? 'bg-gray-400' : 'bg-blue-800'} rounded-lg`}
+                className={`w-full py-2 text-3xl ${activeTab === index + 1 ? 'bg-gray-400' : 'bg-blue-800'} rounded-lg`}
                 onClick={() => {
                   setActiveTab(index + 1);
                   setWrong(0);
@@ -846,6 +848,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                   setTeam2TotalScore(0);
                   setIsVisible(false);
                   setIsAnswered(false);
+                  setTeamReminder(true);
 
                   const playWithDelay = (audioPath, delay) => {
                     const audio = new Audio(audioPath);
@@ -865,7 +868,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                   setActiveTabSO(index + 1);
                 }}
               >
-                {`Round ${index + 1}`}
+                <span className='font-semibold'>{`Round ${index + 1}`}</span> ({round.question.answers.length} answers)
               </button>
             </li>
           ))}
@@ -1007,6 +1010,24 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         >
           Apply Score
         </button>
+        <div className="flex justify-between mt-4 gap-4">
+          <button
+            className="flex-1 py-2 bg-red-600 text-white font-bold rounded-lg"
+            onClick={() => {
+              setTeam1TempScore(team1Score + team1TotalScore + team2TotalScore)
+            }}
+          >
+            ← POIN
+          </button>
+          <button
+            className="flex-1 py-2 bg-green-600 text-white font-bold rounded-lg"
+            onClick={() => {
+              setTeam2TempScore(team2Score + team1TotalScore + team2TotalScore)
+            }}
+          >
+            POIN →
+          </button>
+        </div>
 
         <div className="mt-6">
           <div className="mb-4">

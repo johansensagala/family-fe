@@ -1149,7 +1149,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     )}
   </div>
   {showIncorrect && (
-    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-9xl text-red-500 font-bold animate-pulse">
+    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-9xl text-red-500 font-bold animate-pulse z-50">
       ❌
     </div>
   )}
