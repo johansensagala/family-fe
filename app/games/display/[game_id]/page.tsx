@@ -1206,7 +1206,6 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   style={{
     backgroundImage: "url('/background/black.webp')",
     backgroundSize: "100%",
-    // backgroundSize: "cover",
     backgroundRepeat: "repeat",
     backgroundPosition: "center",
     imageRendering: "auto",
