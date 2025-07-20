@@ -33,9 +33,10 @@ interface AnswerRowProps {
   multiplier?: number;
   onScoreChange: (score: number) => void;
   onIncorrectReveal?: () => void; // ✅ Tambahkan ini untuk menangani klik salah
+  onIncorrectRevealWithoutIcon?: () => void; // ✅ Tambahkan ini untuk menangani klik salah
 }
 
-function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectReveal }: AnswerRowProps) {
+function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectReveal, onIncorrectRevealWithoutIcon }: AnswerRowProps) {
   const [revealed, setRevealed] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [playFirstSurpriseEffect, setPlayFirstSurpriseEffect] = useState(false);
@@ -138,8 +139,8 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
           setShowWarning(false);
         }, 500);
 
-        if (onIncorrectReveal) {
-          onIncorrectReveal();
+        if (onIncorrectRevealWithoutIcon) {
+          onIncorrectRevealWithoutIcon();
         }
       }
 
@@ -846,6 +847,19 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       setWrong(wrongRef.current + 1);
     }
   };
+  
+  const handleIncorrectRevealWithoutIcon = () => {
+    const audio = new Audio('/sounds/wrong.mp3');
+    audio.currentTime = 0;
+    audio.play();
+
+    // setShowIncorrect(true);
+    // setTimeout(() => setShowIncorrect(false), 3000);
+
+    if (isVisibleRef.current) {
+      setWrong(wrongRef.current + 1);
+    }
+  };
 
   // 1️⃣ Ref untuk container dan teks
   const answerRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -1182,6 +1196,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           multiplier={currentRound.type === 'DOUBLE' ? 2 : 1}
           onScoreChange={onScoreChange}
           onIncorrectReveal={handleIncorrectReveal}
+          onIncorrectRevealWithoutIcon={handleIncorrectRevealWithoutIcon}
         />
       </motion.div>
     ))}

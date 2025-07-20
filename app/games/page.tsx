@@ -6,48 +6,48 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
 export default function MainMenuPage() {
-    const menus = [
-        { title: 'Questions',     href: '/games/questions' },
-        { title: 'Add Questions', href: '/games/questions/add' },
-        { title: 'Game',          href: '/games/game' },
-        { title: 'Add Game',      href: '/games/game/add' }
-    ]
+	const menus = [
+		{ title: 'Questions',     href: '/games/questions' },
+		{ title: 'Add Questions', href: '/games/questions/add' },
+		{ title: 'Game',          href: '/games/game' },
+		{ title: 'Add Game',      href: '/games/game/add' }
+	]
 
-    const audioRef = useRef<HTMLAudioElement | null>(null)
-    const [muted, setMuted] = useState(false)
+	const audioRef = useRef<HTMLAudioElement | null>(null)
+	const [muted, setMuted] = useState(false)
 
-    useEffect(() => {
-        const audio = audioRef.current
-        if (!audio) return
-        audio.muted = muted
-    }, [muted])
+	useEffect(() => {
+		const audio = audioRef.current
+		if (!audio) return
+		audio.muted = muted
+	}, [muted])
 
-    return (
-        <div
+	return (
+		<div
 			className="min-h-screen flex flex-col items-center justify-center overflow-hidden"
-            style={{
-                backgroundImage: "url('/background/black.webp')",
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                fontFamily: '"Michroma", sans-serif'
-            }}
-        >
-            {/* --- BGM element --- */}
-            <audio
-                ref={audioRef}
-                src="/sounds/funny-music.mp3"
-                preload="auto"
-                autoPlay
-                loop
-            />
+			style={{
+				backgroundImage: "url('/background/black.webp')",
+				backgroundSize: 'cover',
+				backgroundPosition: 'center',
+				fontFamily: '"Michroma", sans-serif'
+			}}
+		>
+			{/* --- BGM element --- */}
+			<audio
+				ref={audioRef}
+				src="/sounds/funny-music.mp3"
+				preload="auto"
+				autoPlay
+				loop
+			/>
 
-            {/* --- tombol mute --- */}
-            <button
-                onClick={() => setMuted((m) => !m)}
-                className="absolute top-4 right-4 text-white/80 hover:text-white transition z-10"
-            >
-                {muted ? <VolumeX size={32} /> : <Volume2 size={32} />}
-            </button>
+			{/* --- tombol mute --- */}
+			<button
+				onClick={() => setMuted((m) => !m)}
+				className="absolute top-4 right-4 text-white/80 hover:text-white transition z-10"
+			>
+				{muted ? <VolumeX size={32} /> : <Volume2 size={32} />}
+			</button>
 
 			<motion.div
 				id="game-container"
@@ -90,7 +90,7 @@ export default function MainMenuPage() {
 				</motion.div>
 			</motion.div>
 
-            {/* --- menu grid --- */}
+			{/* --- menu grid --- */}
 			<div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6">
 				{menus.map((m, i) => (
 					<Link key={m.title} href={m.href}>
@@ -133,6 +133,6 @@ export default function MainMenuPage() {
 					</Link>
 				))}
 			</div>
-        </div>
-    )
+		</div>
+	)
 }
