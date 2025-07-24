@@ -325,6 +325,8 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       setWrong(wrong + 1);
     }
 
+    // console.log(wrong)
+
     socket.emit("handle-incorrect", null);
   };
 

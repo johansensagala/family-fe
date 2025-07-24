@@ -3,9 +3,8 @@
 import { getAllGames } from '@/services/gameService'
 import { motion } from 'framer-motion'
 import { ArrowLeft, X } from 'lucide-react'
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function GameQuestionList() {
 	const [games, setGames] = useState([])
@@ -29,7 +28,7 @@ export default function GameQuestionList() {
 		fetchGames()
 	}, [])
 
-	if (loading) return <div className="text-white text-center p-8">Memuat pertanyaan...</div>
+	if (loading) return <div className="text-white text-center p-8">Loading...</div>
 	if (error) return <div className="text-red-400 text-center p-8">{error}</div>
 
 	// Flatten semua pertanyaan dari semua games dan rounds
@@ -55,13 +54,22 @@ export default function GameQuestionList() {
 			}}
 		>
 			<div className="max-w-4xl mx-auto">
-				<Link
-					href="/games"
-					className="inline-flex items-center text-sm text-purple-300 hover:text-white mb-6 transition"
-				>
-					<ArrowLeft className="mr-2 w-4 h-4" />
-					Kembali ke Menu
-				</Link>
+                <div className="flex justify-between items-center mb-6">
+                    <button
+                        onClick={() => router.back()}
+                        className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg shadow-md transition duration-200"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                        Back
+                    </button>
+
+                    <button
+                        onClick={() => router.push('/games/game/add')}
+                        className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition duration-200"
+                    >
+                        Add Game
+                    </button>
+                </div>
 
 				<motion.h1
 					initial={{ opacity: 0, y: -20 }}
@@ -69,7 +77,7 @@ export default function GameQuestionList() {
 					transition={{ duration: 0.6 }}
 					className="text-4xl md:text-5xl font-bold text-center mb-10 bg-gradient-to-r from-yellow-300 via-yellow-400 to-orange-500 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,255,0,0.8)]"
 				>
-					Daftar Pertanyaan dari Game
+					List of Game
 				</motion.h1>
 
 				<div className="grid gap-4">
@@ -114,6 +122,27 @@ export default function GameQuestionList() {
                             Game: {selectedGame.name}
                         </h2>
 
+                        <div className="my-8 flex flex-row justify-center items-center space-x-2">
+                            <button
+                                onClick={() => router.push(`/games/remote/${selectedGame.id}`)}
+                                className="w-48 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow"
+                            >
+                                Remote
+                            </button>
+                            <button
+                                onClick={() => router.push(`/games/display/${selectedGame.id}`)}
+                                className="w-48 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow"
+                            >
+                                Display
+                            </button>
+                            <button
+                                onClick={() => router.push(`/games/game/edit/${selectedGame.id}`)}
+                                className="w-48 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded shadow"
+                            >
+                                Edit
+                            </button>
+                        </div>
+
                         <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
                             {selectedGame.rounds.map((round, index) => (
                                 <div key={round.id} className="bg-purple-900/20 p-4 rounded-xl border border-purple-400/10">
@@ -154,7 +183,7 @@ export default function GameQuestionList() {
                                             onClick={() => router.push(`/games/questions/edit/${round.question.id}`)}
                                             className="bg-gradient-to-br from-purple-600 to-pink-500 hover:from-pink-600 hover:to-purple-700 transition text-white font-bold py-2 px-6 rounded-full shadow-lg"
                                         >
-                                            Edit Pertanyaan
+                                            Edit Question
                                         </button>
                                     </div>
                                 </div>

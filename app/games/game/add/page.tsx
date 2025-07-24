@@ -1,13 +1,22 @@
 'use client'
 
+import { createGameWithRounds, getAllQuestions } from '@/services/gameService'
+import { ArrowLeft } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Swal from 'sweetalert2'
-import { createGameWithRounds } from '@/services/gameService'
-import { getAllQuestions } from '@/services/gameService' // pastikan endpoint ini ada
+
+interface Answer {
+    id: number
+    answer: string
+    poin: number
+    isSurprise: boolean
+}
 
 interface Question {
     id: number
     question: string
+    answers: Answer[]
 }
 
 interface RoundInput {
@@ -16,6 +25,7 @@ interface RoundInput {
 }
 
 export default function Game() {
+    const router = useRouter()
     const [name, setName] = useState('')
     const [rounds, setRounds] = useState<RoundInput[]>([{ type: 'SINGLE', questionId: '' }])
     const [questions, setQuestions] = useState<Question[]>([])
@@ -36,6 +46,8 @@ export default function Game() {
     }
 
     const addRound = () => {
+        console.log(questions)
+
         setRounds([...rounds, { type: 'SINGLE', questionId: '' }])
     }
 
@@ -98,11 +110,19 @@ export default function Game() {
                 fontFamily: '"Michroma", sans-serif'
             }}
         >
+            <button
+                onClick={() => router.back()}
+                className="absolute top-6 left-6 inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium px-4 py-2 rounded-lg shadow-md transition duration-200"
+            >
+                <ArrowLeft className="w-5 h-5" />
+                Back
+            </button>
+
             <div className="w-full max-w-3xl bg-gray-800 text-white p-6 rounded-lg shadow-lg">
                 <h2 className="text-2xl font-bold mb-4 text-center">Buat Game + Rounds</h2>
                 <form onSubmit={handleSubmit} className="space-y-8">
                     <div>
-                        <label className="block mb-2 font-semibold">Nama Game:</label>
+                        <label className="block mb-2 font-semibold">Name of Game:</label>
                         <input
                             type="text"
                             value={name}
@@ -122,13 +142,13 @@ export default function Game() {
                                         onClick={() => removeRound(i)}
                                         className="text-red-300 hover:text-red-500"
                                     >
-                                        Hapus Round
+                                        Delete Round
                                     </button>
                                 )}
                             </div>
 
                             <div>
-                                <label className="block mb-1">Tipe Round:</label>
+                                <label className="block mb-1">Round Type:</label>
                                 <select
                                     value={round.type}
                                     onChange={(e) => handleRoundChange(i, 'type', e.target.value)}
@@ -140,17 +160,17 @@ export default function Game() {
                             </div>
 
                             <div>
-                                <label className="block mb-1">Pilih Pertanyaan:</label>
+                                <label className="block mb-1">Select Question:</label>
                                 <select
                                     value={round.questionId}
                                     onChange={(e) => handleRoundChange(i, 'questionId', Number(e.target.value))}
                                     className="w-full px-4 py-2 rounded bg-gray-200 text-gray-900"
                                     required
                                 >
-                                    <option value="">-- Pilih Pertanyaan --</option>
+                                    <option value="">-- Select Question --</option>
                                     {questions.map((q) => (
                                         <option key={q.id} value={q.id}>
-                                            {q.question}
+                                            {q.question} ({q.answers.length} answer)
                                         </option>
                                     ))}
                                 </select>
@@ -164,7 +184,7 @@ export default function Game() {
                             onClick={addRound}
                             className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded"
                         >
-                            Tambah Round
+                            Add Round
                         </button>
 
                         <button
@@ -172,7 +192,7 @@ export default function Game() {
                             disabled={isSubmitting}
                             className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold px-6 py-3 rounded"
                         >
-                            {isSubmitting ? 'Menyimpan...' : 'Simpan Game'}
+                            {isSubmitting ? 'Menyimpan...' : 'Save Game'}
                         </button>
                     </div>
                 </form>

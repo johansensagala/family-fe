@@ -44,7 +44,7 @@ export const createQuestion = async (payload: {
     question: string;
     answers: { answer: string; poin: number; isSurprise: boolean }[];
     }) => {
-        const res = await fetch(`${BASE_URL}/games/create-questions`, {
+        const res = await fetch(`${BASE_URL}/games/questions/add`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -119,3 +119,39 @@ export async function createGameWithRounds(payload: {
 
     return await res.json();
 }
+
+// Get a single game by ID
+export const getGameById = async (id: number | string) => {
+    const res = await fetch(`${BASE_URL}/games/${id}`);
+
+    if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(`Failed to fetch game: ${msg}`);
+    }
+
+    return await res.json();
+};
+
+// Update an existing game
+export const updateGame = async (id: number | string, payload: {
+    name: string;
+    rounds: {
+        questionId: number | string;
+        type: string;
+    }[];
+}) => {
+    const res = await fetch(`${BASE_URL}/games/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(`Failed to update game: ${msg}`);
+    }
+
+    return await res.json();
+};
