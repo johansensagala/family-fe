@@ -26,100 +26,50 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
         io.on("connection", (socket) => {
             console.log("Client game connected");
 
-            socket.on("handle-incorrect", (data) => {
-                socket.broadcast.emit("handle-incorrect", data);
+            // TAMBAHKAN SOCKET2 TADI DISINI
+            // 🔹 event untuk menampilkan semua coppers
+            socket.on("handle-show-all-coppers", () => {
+                socket.broadcast.emit("handle-show-all-coppers");
             });
 
-            socket.on("set-minus-wrong", (data) => {
-                socket.broadcast.emit("set-minus-wrong", data);
+            // 🔹 event pause/play musik
+            socket.on("handle-pause-or-play-music", () => {
+                socket.broadcast.emit("handle-pause-or-play-music");
             });
 
-            socket.on("set-plus-wrong", (data) => {
-                socket.broadcast.emit("set-plus-wrong", data);
+            // 🔹 event buka modal quiz
+            socket.on("handle-open-modal-quiz", () => {
+                socket.broadcast.emit("handle-open-modal-quiz");
             });
 
-            socket.on("set-question-visible", (data) => {
-                socket.broadcast.emit("set-question-visible", data);
+            // 🔹 event tutup modal quiz
+            socket.on("handle-close-modal-quiz", () => {
+                socket.broadcast.emit("handle-close-modal-quiz");
             });
 
-            socket.on("set-active-player", (data) => {
-                socket.broadcast.emit("set-active-player", data);
+            // 🔹 feedback wrong
+            socket.on("handle-feedback-wrong", () => {
+                socket.broadcast.emit("handle-feedback-wrong");
             });
 
-            socket.on("set-active-tab-blank", (data) => {
-                socket.broadcast.emit("set-active-tab-blank", data);
+            // 🔹 feedback correct
+            socket.on("handle-feedback-correct", () => {
+                socket.broadcast.emit("handle-feedback-correct");
             });
 
-            socket.on("set-active-tab-main-round", (data) => {
-                socket.broadcast.emit("set-active-tab-main-round", data);
+            // 🔹 reveal answer
+            socket.on("handle-reveal-answer", () => {
+                socket.broadcast.emit("handle-reveal-answer");
             });
 
-            socket.on("set-active-tab-final", (data) => {
-                socket.broadcast.emit("set-active-tab-final", data);
+            // 🔹 open modal copper (kirim object copper)
+            socket.on("handle-open-modal-copper", (copper) => {
+                socket.broadcast.emit("handle-open-modal-copper", copper);
             });
 
-            socket.on("set-active-tab-single", (data) => {
-                socket.broadcast.emit("set-active-tab-single", data);
-            });
-
-            socket.on("set-active-tab-double", (data) => {
-                socket.broadcast.emit("set-active-tab-double", data);
-            });
-
-            socket.on("set-active-tab-bonus", (data) => {
-                socket.broadcast.emit("set-active-tab-bonus", data);
-            });
-
-            socket.on("set-active-tab-main", (data) => {
-                socket.broadcast.emit("set-active-tab-main", data);
-            });
-
-            socket.on("set-active-tab-timer1", (data) => {
-                socket.broadcast.emit("set-active-tab-timer1", data);
-            });
-
-            socket.on("set-active-tab-timer2", (data) => {
-                socket.broadcast.emit("set-active-tab-timer2", data);
-            });
-
-            socket.on("set-reveal-answer", (data) => {
-                socket.broadcast.emit("set-reveal-answer", data);
-            });
-            
-            socket.on("set-start-timer", (data) => {
-                socket.broadcast.emit("set-start-timer", data);
-            });
-            
-            socket.on("set-stop-timer", (data) => {
-                socket.broadcast.emit("set-stop-timer", data);
-            });
-            
-            socket.on("set-same-answer", (data) => {
-                socket.broadcast.emit("set-same-answer", data);
-            });
-
-            socket.on("set-score", (data) => {
-                socket.broadcast.emit("set-score", data);
-            });
-            
-            socket.on("set-final-answer", (data) => {
-                socket.broadcast.emit("set-final-answer", data);
-            });
-
-            socket.on("set-final-score", (data) => {
-                socket.broadcast.emit("set-final-score", data);
-            });
-
-            socket.on("set-final-top-answer", (data) => {
-                socket.broadcast.emit("set-final-top-answer", data);
-            });
-
-            socket.on("set-sound-effect", (data) => {
-                socket.broadcast.emit("set-sound-effect", data);
-            });
-
-            socket.on("set-sound-special-answer", (data) => {
-                socket.broadcast.emit("set-sound-special-answer", data);
+            // 🔹 close modal copper
+            socket.on("handle-close-modal-copper", () => {
+                socket.broadcast.emit("handle-close-modal-copper");
             });
 
         });

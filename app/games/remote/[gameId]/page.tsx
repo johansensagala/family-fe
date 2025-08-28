@@ -1,7 +1,10 @@
 'use client';
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
+import io from "socket.io-client";
+
+let socket: any;
 
 type Copper = {
   id: number;
@@ -24,7 +27,9 @@ type Quiz = {
   level: string;
 };
 
-export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
+export default function Game40Koper({ params }: { readonly params: { readonly gameId: string } }) {
+  const { gameId } = params;
+
   const [game, setGame] = useState<Game | null>(null);
   const [selectedCopper, setSelectedCopper] = useState<Copper | null>(null);
   const [isOpening, setIsOpening] = useState<number | null>(null);
@@ -38,11 +43,131 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
   const [showAnswer, setShowAnswer] = useState(false);
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
+  
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
+
+  // FUNCTION FOR SOCKET
+
+  const handleShowAllCoppers = () => {
+    socket.emit("handle-show-all-coppers", null);
+
+    setShowCoppers(true);
+  }
+  
+  const handlePauseOrPlayMusic = () => {
+    socket.emit("handle-pause-or-play-music", null);
+
+    if (bgmRef.current.paused) {
+      bgmRef.current.play().catch(() => {});
+    } else {
+      bgmRef.current.pause();
+    }
+  }
+
+  const handleOpenModalQuiz = async () => {
+    socket.emit("handle-open-modal-quiz", null);
+
+    try {
+      setShowAnswer(false);
+
+      const audio = new Audio("/sounds/start.mp3");
+      audio.volume = 0.6;
+      audio.play();
+
+      let quiz: Quiz | null = null;
+      let attempts = 0;
+
+      // coba fetch sampai dapat quiz baru atau max 10x
+      while (!quiz && attempts < 10) {
+        const res = await fetch(`${API_BASE_URL}/api/quizzes/random`);
+        if (!res.ok) throw new Error("Failed to fetch random quiz");
+        const data: Quiz = await res.json();
+
+        if (!shownQuizIds.has(data.id)) {
+          quiz = data;
+          setShownQuizIds((prev) => new Set(prev).add(data.id));
+        } else {
+          attempts++;
+        }
+      }
+
+      if (quiz) {
+        setRandomQuiz(quiz);
+
+        // play reveal saat quiz muncul
+        const reveal = new Audio("/sounds/reveal.mp3");
+        reveal.volume = 0.7;
+        reveal.play();
+      } else {
+        console.log("Semua quiz sudah pernah ditampilkan 🎉");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  const handleCloseModalQuiz = () => {
+    socket.emit("handle-close-modal-quiz", null);
+
+    setShowAnswer(false);
+    setRandomQuiz(null);
+  };
+
+  const handleFeedbackWrong = () => {
+    socket.emit("handle-feedback-wrong", null);
+
+    setFeedback("wrong");
+  }
+
+  const handleFeedbackCorrect = () => {
+    socket.emit("handle-feedback-correct", null);
+
+    setFeedback("correct");
+  }
+
+  const handleRevealAnswer = () => {
+    socket.emit("handle-reveal-answer", null);
+
+    setShowAnswer(true);
+  }
+
+  const handleOpenModalCopper = (copper: Copper) => {
+    socket.emit("handle-open-modal-copper", copper);
+
+    if (opened.includes(copper.id)) return;
+
+    setIsOpening(copper.id);
+    setShowFlash(true);
+
+    setTimeout(() => {
+      setSelectedCopper(copper);
+      setShowFlash(false);
+      setIsOpening(null);
+      setOpened((prev) => [...prev, copper.id]);
+    }, 3000);
+  };
+
+  const handleCloseModalCopper = () => {
+    socket.emit("handle-close-modal-copper", null);
+
+    setSelectedCopper(null)
+  }
+
+
+
+
+  //=======================================================/
+  
+  useEffect(() => {
+    socket = io(undefined, {
+      path: "/api/socket",
+    });
+  }, []);
 
   useEffect(() => {
     const fetchGame = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/games/${gameId}`);
+        const res = await fetch(`${API_BASE_URL}/api/games/${gameId}`);
         if (!res.ok) throw new Error("Failed to fetch game");
         const data: Game = await res.json();
         setGame(data);
@@ -59,59 +184,25 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
   useEffect(() => {
     const handleKeyPress = async (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "s") {
-        setShowCoppers(true);
+        handleShowAllCoppers();
       }
 
       if (e.key.toLowerCase() === "q") {
-        try {
-          const audio = new Audio("/sounds/start.mp3");
-          audio.volume = 0.6;
-          audio.play();
-
-          let quiz: Quiz | null = null;
-          let attempts = 0;
-
-          // coba fetch sampai dapat quiz baru atau max 10x
-          while (!quiz && attempts < 10) {
-            const res = await fetch("http://localhost:8080/api/quizzes/random");
-            if (!res.ok) throw new Error("Failed to fetch random quiz");
-            const data: Quiz = await res.json();
-
-            if (!shownQuizIds.has(data.id)) {
-              quiz = data;
-              setShownQuizIds((prev) => new Set(prev).add(data.id));
-            } else {
-              attempts++;
-            }
-          }
-
-          if (quiz) {
-            setRandomQuiz(quiz);
-
-            // play reveal saat quiz muncul
-            const reveal = new Audio("/sounds/reveal.mp3");
-            reveal.volume = 0.7;
-            reveal.play();
-          } else {
-            console.log("Semua quiz sudah pernah ditampilkan 🎉");
-          }
-        } catch (err) {
-          console.error(err);
-        }
+        await handleOpenModalQuiz();
       }
 
       // ✅❌ tombol X & O hanya berlaku kalau modal quiz terbuka
       if (randomQuiz) {
         if (e.key.toLowerCase() === "x") {
-          setFeedback("wrong");
+          handleFeedbackWrong();
         }
         if (e.key.toLowerCase() === "o") {
-          setFeedback("correct");
+          handleFeedbackCorrect();
         }
 
         // ✅ Tombol R untuk reveal jawaban
         if (e.key.toLowerCase() === "r") {
-          setShowAnswer(true);
+          handleRevealAnswer();
         }
       }
     };
@@ -181,11 +272,7 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "p" && bgmRef.current) {
-        if (bgmRef.current.paused) {
-          bgmRef.current.play().catch(() => {});
-        } else {
-          bgmRef.current.pause();
-        }
+        handlePauseOrPlayMusic();
       }
     };
 
@@ -204,20 +291,6 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
     const timer = setTimeout(() => setFeedback(null), 2000);
     return () => clearTimeout(timer);
   }, [feedback]);
-
-  const handleClick = (copper: Copper) => {
-    if (opened.includes(copper.id)) return;
-
-    setIsOpening(copper.id);
-    setShowFlash(true);
-
-    setTimeout(() => {
-      setSelectedCopper(copper);
-      setShowFlash(false);
-      setIsOpening(null);
-      setOpened((prev) => [...prev, copper.id]);
-    }, 3000);
-  };
 
   const variants = {
     hidden: { opacity: 0, scale: 0 },
@@ -277,7 +350,7 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
               <motion.div
                 key={copper.id}
                 className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 cursor-pointer perspective-1000"
-                onClick={() => handleClick(copper)}
+                onClick={() => handleOpenModalCopper(copper)}
                 custom={idx}
                 variants={variants}
                 initial="hidden"
@@ -294,7 +367,7 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-12 h-3 bg-gradient-to-b from-gray-600 via-gray-400 to-gray-800 rounded-t-full shadow-lg z-30" />
 
               {/* Tutup koper */}
-              <motion.div
+              {/* <motion.div
                 className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-gray-400 via-gray-300 to-gray-600 border-2 border-gray-700 rounded-t-lg shadow-inner z-20"
                 animate={
                   isOpening === copper.id
@@ -306,28 +379,100 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
                   transformOrigin: "bottom center",
                   transformStyle: "preserve-3d",
                 }}
-              />
+              /> */}
 
               {/* Body koper */}
               <div
-                className={`absolute top-0 left-0 w-full h-full rounded-xl border-4 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.8)] 
+                className={`absolute top-0 left-0 w-full h-full rounded-xl border-4 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.8)]
                   ${alreadyOpened
                     ? "bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 border-gray-700 opacity-80"
-                    : "bg-gradient-to-b from-gray-800 via-gray-700 to-gray-900 border-gray-900"}
-                `}
+                    : copper.type === "PUNISHMENT"
+                      ? "bg-gradient-to-b from-red-800 via-red-700 to-red-900 border-red-900"
+                      : copper.type === "REWARD"
+                        ? "bg-gradient-to-b from-blue-800 via-blue-700 to-blue-900 border-blue-900"
+                        : "bg-gradient-to-b from-gray-800 via-gray-700 to-gray-900 border-gray-900"
+                  }`}
               >
                 {alreadyOpened ? (
                   <span className="text-red-600 font-extrabold text-3xl">✖</span>
                 ) : (
-                  <span className="font-extrabold text-white text-2xl drop-shadow-lg tracking-wider">
-                    {idx + 1}
+                  <span className="font-bold text-white text-xs sm:text-sm md:text-base text-center px-1 leading-tight drop-shadow-lg tracking-wider">
+                    {idx + 1}. {copper.description}
                   </span>
                 )}
               </div>
             </motion.div>
           );
         })}
+
       </motion.div>
+
+      {/* Panel Tombol Kontrol */}
+      <div className="mt-8 flex flex-wrap justify-center gap-4">
+        {/* Show All Coppers (S) */}
+        <button
+          onClick={handleShowAllCoppers}
+          className="px-6 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold shadow-lg active:scale-95 transition"
+        >
+          🎒 Show Coppers (S)
+        </button>
+
+        {/* Open Quiz (Q) */}
+        <button
+          onClick={handleOpenModalQuiz}
+          className="px-6 py-3 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-bold shadow-lg active:scale-95 transition"
+        >
+          ❓ Open Quiz (Q)
+        </button>
+
+        {/* Close Quiz (C) */}
+        {randomQuiz && (
+          <button
+            onClick={handleCloseModalQuiz}
+            className="px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-bold shadow-lg active:scale-95 transition"
+          >
+            🚪 Close Quiz (C)
+          </button>
+        )}
+
+        {/* Reveal Answer (R) */}
+        {randomQuiz && !showAnswer && (
+          <button
+            onClick={handleRevealAnswer}
+            className="px-6 py-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-bold shadow-lg active:scale-95 transition"
+          >
+            👀 Reveal Answer (R)
+          </button>
+        )}
+
+        {/* Feedback Wrong (X) */}
+        {randomQuiz && (
+          <button
+            onClick={handleFeedbackWrong}
+            className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold shadow-lg active:scale-95 transition"
+          >
+            ✖ Wrong (X)
+          </button>
+        )}
+
+        {/* Feedback Correct (O) */}
+        {randomQuiz && (
+          <button
+            onClick={handleFeedbackCorrect}
+            className="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold shadow-lg active:scale-95 transition"
+          >
+            ✔ Correct (O)
+          </button>
+        )}
+
+        {/* Pause / Play Music (P) */}
+        <button
+          onClick={handlePauseOrPlayMusic}
+          className="px-6 py-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold shadow-lg active:scale-95 transition"
+        >
+          🎵 Toggle Music (P)
+        </button>
+      </div>
 
       {/* Flash effect */}
       <AnimatePresence>
@@ -355,7 +500,7 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setSelectedCopper(null)}
+            onClick={handleCloseModalCopper}
           >
             {/* Background glow */}
             <motion.div
@@ -394,53 +539,6 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
                 {selectedCopper.description}
               </p>
 
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal Quiz Random */}
-      <AnimatePresence>
-        {randomQuiz && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setRandomQuiz(null)}
-          >
-            {/* Background Glow */}
-            <motion.div
-              className="absolute w-[900px] h-[900px] rounded-full blur-3xl opacity-40 bg-yellow-600"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1.5, opacity: 0.4 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ duration: 2.0, ease: "easeOut" }}
-            />
-
-            {/* Modal Box */}
-            <motion.div
-              className="relative w-[1000px] max-w-6xl rounded-3xl border-8 p-20 text-center
-                        bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700
-                        border-yellow-500 shadow-[0_0_60px_rgba(255,215,0,0.6)]"
-              initial={{ scale: 0.6, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.6, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 180, damping: 20 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Pertanyaan */}
-              <motion.h2
-                className="mb-12 text-6xl font-extrabold leading-snug text-yellow-400 
-                          drop-shadow-[0_0_20px_rgba(255,215,0,0.8)]"
-                initial={{ scale: 0.8 }}
-                animate={{
-                  scale: [1, 1.05, 1],
-                  transition: { repeat: Infinity, duration: 2 },
-                }}
-              >
-                {randomQuiz.question} ❓
-              </motion.h2>
             </motion.div>
           </motion.div>
         )}
@@ -491,65 +589,6 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
             >
               {feedback === "correct" ? "✔" : "✖"}
             </motion.span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal Quiz Random */} 
-      <AnimatePresence>
-        {randomQuiz && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setRandomQuiz(null)}
-          >
-            {/* Background Glow */}
-            <motion.div
-              className="absolute w-[900px] h-[900px] rounded-full blur-3xl opacity-40 bg-yellow-600"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1.5, opacity: 0.4 }}
-              exit={{ scale: 0, opacity: 0 }}
-              transition={{ duration: 2.0, ease: "easeOut" }}
-            />
-
-            {/* Modal Box */}
-            <motion.div
-              className="relative w-[1000px] max-w-6xl rounded-3xl border-8 p-20 text-center
-                        bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700
-                        border-yellow-500 shadow-[0_0_60px_rgba(255,215,0,0.6)]"
-              initial={{ scale: 0.6, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.6, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 180, damping: 20 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Pertanyaan */}
-              <motion.h2
-                className="mb-12 text-6xl font-extrabold leading-snug text-yellow-400 
-                          drop-shadow-[0_0_20px_rgba(255,215,0,0.8)]"
-                initial={{ scale: 0.8 }}
-                animate={{
-                  scale: [1, 1.05, 1],
-                  transition: { repeat: Infinity, duration: 2 },
-                }}
-              >
-                {randomQuiz.question} ❓
-              </motion.h2>
-
-              {/* Jawaban (muncul hanya kalau tekan R) */}
-              {showAnswer && (
-                <motion.p
-                  className="mt-8 text-6xl font-bold text-green-400 drop-shadow-[0_0_15px_rgba(0,255,0,0.7)]"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  {randomQuiz.answer}
-                </motion.p>
-              )}
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

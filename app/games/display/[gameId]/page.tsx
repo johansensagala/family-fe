@@ -2,6 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import io from "socket.io-client";
+
+let socket: any;
 
 type Copper = {
   id: number;
@@ -24,7 +27,9 @@ type Quiz = {
   level: string;
 };
 
-export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
+export default function Game40Koper({ params }: { readonly params: { readonly gameId: string } }) {
+  const { gameId } = params;
+
   const [game, setGame] = useState<Game | null>(null);
   const [selectedCopper, setSelectedCopper] = useState<Copper | null>(null);
   const [isOpening, setIsOpening] = useState<number | null>(null);
@@ -36,13 +41,140 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [shownQuizIds, setShownQuizIds] = useState<Set<number>>(new Set());
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   const bgmRef = useRef<HTMLAudioElement | null>(null);
+  
+  const API_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
+  // FUNCTION FOR SOCKET
+
+  const handleShowAllCoppers = () => {
+    setShowIntro(false);
+
+    setShowCoppers(true);
+  }
+  
+  const handlePauseOrPlayMusic = () => {
+    if (bgmRef.current.paused) {
+      bgmRef.current.play().catch(() => {});
+    } else {
+      bgmRef.current.pause();
+    }
+  }
+
+  const handleOpenModalQuiz = async () => {
+    try {
+      setShowAnswer(false);
+
+      const audio = new Audio("/sounds/start.mp3");
+      audio.volume = 0.6;
+      audio.play();
+
+      let quiz: Quiz | null = null;
+      let attempts = 0;
+
+      // coba fetch sampai dapat quiz baru atau max 10x
+      while (!quiz && attempts < 10) {
+        const res = await fetch(`${API_BASE_URL}/api/quizzes/random`);
+        if (!res.ok) throw new Error("Failed to fetch random quiz");
+        const data: Quiz = await res.json();
+
+        if (!shownQuizIds.has(data.id)) {
+          quiz = data;
+          setShownQuizIds((prev) => new Set(prev).add(data.id));
+        } else {
+          attempts++;
+        }
+      }
+
+      if (quiz) {
+        setRandomQuiz(quiz);
+
+        // play reveal saat quiz muncul
+        const reveal = new Audio("/sounds/reveal.mp3");
+        reveal.volume = 0.7;
+        reveal.play();
+      } else {
+        console.log("Semua quiz sudah pernah ditampilkan 🎉");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  const handleCloseModalQuiz = () => {
+    setShowAnswer(false);
+    setRandomQuiz(null);
+  };
+
+  const handleFeedbackWrong = () => {
+    setFeedback("wrong");
+  }
+
+  const handleFeedbackCorrect = () => {
+    setFeedback("correct");
+  }
+
+  const handleRevealAnswer = () => {
+    setShowAnswer(true);
+  }
+
+  const handleOpenModalCopper = (copper: Copper) => {
+    if (opened.includes(copper.id)) return;
+
+    setIsOpening(copper.id);
+    setShowFlash(true);
+
+    setTimeout(() => {
+      setSelectedCopper(copper);
+      setShowFlash(false);
+      setIsOpening(null);
+      setOpened((prev) => [...prev, copper.id]);
+    }, 3000);
+  };
+
+  const handleCloseModalCopper = () => {
+    setSelectedCopper(null)
+  }
+
+
+
+
+  //=======================================================/
+
+  useEffect(() => {
+    socket = io(undefined, { path: "/api/socket" });
+
+    // daftar listener socket
+    socket.on("handle-show-all-coppers", handleShowAllCoppers);
+    socket.on("handle-pause-or-play-music", handlePauseOrPlayMusic);
+    socket.on("handle-open-modal-quiz", handleOpenModalQuiz);
+    socket.on("handle-close-modal-quiz", handleCloseModalQuiz);
+    socket.on("handle-feedback-wrong", handleFeedbackWrong);
+    socket.on("handle-feedback-correct", handleFeedbackCorrect);
+    socket.on("handle-reveal-answer", handleRevealAnswer);
+    socket.on("handle-open-modal-copper", handleOpenModalCopper);
+    socket.on("handle-close-modal-copper", handleCloseModalCopper);
+
+    // cleanup biar gak leak listener
+    return () => {
+        socket.off("handle-show-all-coppers", handleShowAllCoppers);
+        socket.off("handle-pause-or-play-music", handlePauseOrPlayMusic);
+        socket.off("handle-open-modal-quiz", handleOpenModalQuiz);
+        socket.off("handle-close-modal-quiz", handleCloseModalQuiz);
+        socket.off("handle-feedback-wrong", handleFeedbackWrong);
+        socket.off("handle-feedback-correct", handleFeedbackCorrect);
+        socket.off("handle-reveal-answer", handleRevealAnswer);
+        socket.off("handle-open-modal-copper", handleOpenModalCopper);
+        socket.off("handle-close-modal-copper", handleCloseModalCopper);
+    };
+  }, []);
+  
   useEffect(() => {
     const fetchGame = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/games/${gameId}`);
+        const res = await fetch(`${API_BASE_URL}/api/games/${gameId}`);
         if (!res.ok) throw new Error("Failed to fetch game");
         const data: Game = await res.json();
         setGame(data);
@@ -59,59 +191,25 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
   useEffect(() => {
     const handleKeyPress = async (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "s") {
-        setShowCoppers(true);
+        handleShowAllCoppers();
       }
 
       if (e.key.toLowerCase() === "q") {
-        try {
-          const audio = new Audio("/sounds/start.mp3");
-          audio.volume = 0.6;
-          audio.play();
-
-          let quiz: Quiz | null = null;
-          let attempts = 0;
-
-          // coba fetch sampai dapat quiz baru atau max 10x
-          while (!quiz && attempts < 10) {
-            const res = await fetch("http://localhost:8080/api/quizzes/random");
-            if (!res.ok) throw new Error("Failed to fetch random quiz");
-            const data: Quiz = await res.json();
-
-            if (!shownQuizIds.has(data.id)) {
-              quiz = data;
-              setShownQuizIds((prev) => new Set(prev).add(data.id));
-            } else {
-              attempts++;
-            }
-          }
-
-          if (quiz) {
-            setRandomQuiz(quiz);
-
-            // play reveal saat quiz muncul
-            const reveal = new Audio("/sounds/reveal.mp3");
-            reveal.volume = 0.7;
-            reveal.play();
-          } else {
-            console.log("Semua quiz sudah pernah ditampilkan 🎉");
-          }
-        } catch (err) {
-          console.error(err);
-        }
+        await handleOpenModalQuiz();
       }
 
       // ✅❌ tombol X & O hanya berlaku kalau modal quiz terbuka
       if (randomQuiz) {
         if (e.key.toLowerCase() === "x") {
-          setFeedback("wrong");
+          handleFeedbackWrong();
         }
         if (e.key.toLowerCase() === "o") {
-          setFeedback("correct");
+          handleFeedbackCorrect();
         }
 
         // ✅ Tombol R untuk reveal jawaban
         if (e.key.toLowerCase() === "r") {
-          setShowAnswer(true);
+          handleRevealAnswer();
         }
       }
     };
@@ -145,27 +243,34 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
   }, [selectedCopper]);
 
   useEffect(() => {
-    // setup musik
-    const audio = new Audio("/sounds/music.mp3");
-    audio.loop = true;
-    audio.volume = 0.5;
-    bgmRef.current = audio;
+    if (!bgmRef.current) {
+      // kalau belum ada audio, bikin sekali aja
+      bgmRef.current = new Audio("/sounds/deal.mp3");
+      bgmRef.current.loop = true;
+      bgmRef.current.volume = 0.5;
 
-    // autoplay musik (user harus sudah ada interaction di browser modern)
-    const startMusic = () => {
-      audio.play().catch((err) => console.warn("Autoplay blocked:", err));
-      window.removeEventListener("click", startMusic);
-      window.removeEventListener("keydown", startMusic);
-    };
-    // tunggu interaction pertama (agar tidak diblokir autoplay policy)
-    window.addEventListener("click", startMusic);
-    window.addEventListener("keydown", startMusic);
+      const startMusic = () => {
+        bgmRef.current?.play().catch((err) => console.warn("Autoplay blocked:", err));
+        window.removeEventListener("click", startMusic);
+        window.removeEventListener("keydown", startMusic);
+      };
+      window.addEventListener("click", startMusic);
+      window.addEventListener("keydown", startMusic);
+    }
+
+    // setiap kali showIntro berubah → cukup ganti src
+    if (bgmRef.current) {
+      bgmRef.current.pause();
+      bgmRef.current.currentTime = 0;
+      bgmRef.current.src = showIntro ? "/sounds/deal.mp3" : "/sounds/music.mp3";
+      bgmRef.current.load();
+      bgmRef.current.play().catch(() => {});
+    }
 
     return () => {
-      audio.pause();
-      audio.currentTime = 0;
+      bgmRef.current?.pause();
     };
-  }, []);
+  }, [showIntro]);
 
   // 🔊 pause/resume music saat modal muncul/hilang
   useEffect(() => {
@@ -181,11 +286,7 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "p" && bgmRef.current) {
-        if (bgmRef.current.paused) {
-          bgmRef.current.play().catch(() => {});
-        } else {
-          bgmRef.current.pause();
-        }
+        handlePauseOrPlayMusic();
       }
     };
 
@@ -205,19 +306,16 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
     return () => clearTimeout(timer);
   }, [feedback]);
 
-  const handleClick = (copper: Copper) => {
-    if (opened.includes(copper.id)) return;
+  useEffect(() => {
+    if (game?.coppers && game.coppers.length > 0) {
+      // kasih delay 3 detik sebelum intro hilang
+      const timer = setTimeout(() => {
+        setShowIntro(false);
+      }, 90000);
 
-    setIsOpening(copper.id);
-    setShowFlash(true);
-
-    setTimeout(() => {
-      setSelectedCopper(copper);
-      setShowFlash(false);
-      setIsOpening(null);
-      setOpened((prev) => [...prev, copper.id]);
-    }, 3000);
-  };
+      return () => clearTimeout(timer);
+    }
+  }, [game]);
 
   const variants = {
     hidden: { opacity: 0, scale: 0 },
@@ -265,69 +363,97 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
       </h1> */}
 
       {/* Grid 8 x 5 (untuk 40 koper) */}
-      <motion.div
-        className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-4 sm:gap-6 md:gap-10 lg:gap-14 z-10"
-        initial="hidden"
-        animate={showCoppers ? "show" : "hidden"}
-      >
-        {game.coppers.map((copper, idx) => {
-          const alreadyOpened = opened.includes(copper.id);
+      {/* Intro / Grid Koper */}
+      <AnimatePresence mode="wait">
+        {showIntro ? (
+          // Tampilkan intro dulu
+          <motion.h1
+            className="text-7xl md:text-9xl font-extrabold text-transparent bg-clip-text 
+                      bg-gradient-to-r from-yellow-400 via-red-500 to-yellow-400 drop-shadow-2xl"
+            animate={{
+              scale: [1, 1.1, 1],
+              rotate: [0, 2, -2, 0],
+              textShadow: [
+                "0px 0px 20px rgba(255,0,0,0.9)",
+                "0px 0px 40px rgba(255,255,0,1)",
+                "0px 0px 20px rgba(255,0,0,0.9)",
+              ],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              repeatType: "mirror",
+            }}
+          >
+            DEAL OR NO DEAL
+          </motion.h1>
+        ) : (
+          // Grid koper
+          <motion.div
+            key="grid"
+            className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-4 sm:gap-6 md:gap-10 lg:gap-14 z-10"
+            initial="hidden"
+            animate={showCoppers ? "show" : "hidden"}
+          >
+            {game.coppers.map((copper, idx) => {
+              const alreadyOpened = opened.includes(copper.id);
 
-          return (
-              <motion.div
-                key={copper.id}
-                className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 cursor-pointer perspective-1000"
-                onClick={() => handleClick(copper)}
-                custom={idx}
-                variants={variants}
-                initial="hidden"
-                animate={showCoppers ? "show" : "hidden"}
-                onAnimationComplete={() => {
-                  if (showCoppers) {
-                    const audio = new Audio("/sounds/flip.mp3");
-                    audio.volume = 0.5;
-                    audio.play();
-                  }
-                }}
-              >
-              {/* Handle koper */}
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-12 h-3 bg-gradient-to-b from-gray-600 via-gray-400 to-gray-800 rounded-t-full shadow-lg z-30" />
+              return (
+                <motion.div
+                  key={copper.id}
+                  className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 cursor-pointer perspective-1000"
+                  onClick={() => handleOpenModalCopper(copper)}
+                  custom={idx}
+                  variants={variants}
+                  initial="hidden"
+                  animate={showCoppers ? "show" : "hidden"}
+                  onAnimationComplete={() => {
+                    if (showCoppers) {
+                      const audio = new Audio("/sounds/flip.mp3");
+                      audio.volume = 0.5;
+                      audio.play();
+                    }
+                  }}
+                >
+                  {/* Handle koper */}
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-12 h-3 bg-gradient-to-b from-gray-600 via-gray-400 to-gray-800 rounded-t-full shadow-lg z-30" />
 
-              {/* Tutup koper */}
-              <motion.div
-                className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-gray-400 via-gray-300 to-gray-600 border-2 border-gray-700 rounded-t-lg shadow-inner z-20"
-                animate={
-                  isOpening === copper.id
-                    ? { rotateX: -120, y: -4, opacity: 0 }
-                    : { rotateX: 0, y: 0, opacity: alreadyOpened ? 0 : 1 }
-                }
-                transition={{ duration: 1.2, ease: "easeInOut" }}
-                style={{
-                  transformOrigin: "bottom center",
-                  transformStyle: "preserve-3d",
-                }}
-              />
+                  {/* Tutup koper */}
+                  <motion.div
+                    className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-gray-400 via-gray-300 to-gray-600 border-2 border-gray-700 rounded-t-lg shadow-inner z-20"
+                    animate={
+                      isOpening === copper.id
+                        ? { rotateX: -120, y: -4, opacity: 0 }
+                        : { rotateX: 0, y: 0, opacity: alreadyOpened ? 0 : 1 }
+                    }
+                    transition={{ duration: 1.2, ease: "easeInOut" }}
+                    style={{
+                      transformOrigin: "bottom center",
+                      transformStyle: "preserve-3d",
+                    }}
+                  />
 
-              {/* Body koper */}
-              <div
-                className={`absolute top-0 left-0 w-full h-full rounded-xl border-4 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.8)] 
-                  ${alreadyOpened
-                    ? "bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 border-gray-700 opacity-80"
-                    : "bg-gradient-to-b from-gray-800 via-gray-700 to-gray-900 border-gray-900"}
-                `}
-              >
-                {alreadyOpened ? (
-                  <span className="text-red-600 font-extrabold text-3xl">✖</span>
-                ) : (
-                  <span className="font-extrabold text-white text-2xl drop-shadow-lg tracking-wider">
-                    {idx + 1}
-                  </span>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
-      </motion.div>
+                  {/* Body koper */}
+                  <div
+                    className={`absolute top-0 left-0 w-full h-full rounded-xl border-4 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.8)] 
+                      ${alreadyOpened
+                        ? "bg-gradient-to-b from-gray-900 via-gray-800 to-gray-700 border-gray-700 opacity-80"
+                        : "bg-gradient-to-b from-gray-800 via-gray-700 to-gray-900 border-gray-900"}`}
+                  >
+                    {alreadyOpened ? (
+                      <span className="text-red-600 font-extrabold text-3xl">✖</span>
+                    ) : (
+                      <span className="font-extrabold text-white text-2xl drop-shadow-lg tracking-wider">
+                        {idx + 1}
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Flash effect */}
       <AnimatePresence>
@@ -355,7 +481,7 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setSelectedCopper(null)}
+            onClick={handleCloseModalCopper}
           >
             {/* Background glow */}
             <motion.div
@@ -503,7 +629,7 @@ export default function Game40Koper({ gameId = 1 }: { gameId?: number }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setRandomQuiz(null)}
+            onClick={handleCloseModalQuiz}
           >
             {/* Background Glow */}
             <motion.div
