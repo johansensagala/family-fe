@@ -165,13 +165,13 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
   // Setup background audio (hanya sekali)
   useEffect(() => {
-    bgAudioRef1.current = new Audio('/sounds/timer-background.mp3');
+    bgAudioRef1.current = new Audio('/sounds/timer-music.mp3');
     bgAudioRef1.current.loop = true;
-    bgAudioRef1.current.volume = 0.2; // set volume ke 50%
+    bgAudioRef1.current.volume = 0.1; // set volume ke 50%
 
     bgAudioRef2.current = new Audio('/sounds/timer-music.mp3');
     bgAudioRef2.current.loop = true;
-    bgAudioRef2.current.volume = 0.2; // set volume ke 50%
+    bgAudioRef2.current.volume = 0.1; // set volume ke 50%
   }, []);
 
   // Timer countdown dan kontrol background music
