@@ -1,6 +1,6 @@
 'use client'
 
-import { getAllGames } from '@/services/gameService'
+import { getAllGames, generateRandomGame } from '@/services/gameService'
 import { motion } from 'framer-motion'
 import { ArrowLeft, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -62,6 +62,51 @@ export default function GameQuestionList() {
                         <ArrowLeft className="w-5 h-5" />
                         Back
                     </button>
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => router.push('/games/game/add')}
+                            className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition duration-200"
+                        >
+                            Add Game
+                        </button>
+
+                        <button
+                            onClick={async () => {
+                                try {
+                                    setLoading(true);
+
+                                    // 1. Generate random game
+                                    await generateRandomGame();
+
+                                    // 2. Fetch ulang semua game
+                                    const updatedGames = await getAllGames();
+                                    setGames(updatedGames);
+
+                                    // 3. Tampilkan SweetAlert sukses
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Berhasil!',
+                                        text: 'Game random berhasil dibuat.',
+                                        timer: 2000,
+                                        showConfirmButton: false,
+                                    });
+                                } catch (err) {
+                                    console.error(err);
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Gagal',
+                                        text: 'Gagal membuat game random',
+                                    });
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow-md transition duration-200"
+                        >
+                            Generate Random Game
+                        </button>
+                    </div>
 
                     <button
                         onClick={() => router.push('/games/game/add')}

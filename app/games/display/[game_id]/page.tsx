@@ -529,7 +529,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         });
       }
 
-      const audio = tempFinalScoreSO != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/wrong-2.mp3')
+      const audio = tempFinalScoreSO != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/wrong.mp3');
       audio.currentTime = 0;
       audio.play();
 

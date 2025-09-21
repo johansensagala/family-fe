@@ -155,3 +155,18 @@ export const updateGame = async (id: number | string, payload: {
 
     return await res.json();
 };
+
+// Generate random game
+export const generateRandomGame = async () => {
+    const res = await fetch(`${BASE_URL}/games/generate-random`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(`Failed to generate random game: ${msg}`);
+    }
+
+    return await res.json();
+};
