@@ -91,3 +91,104 @@ nextjs-portal {
     background-color: transparent;
   }
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -150% 0;
+  }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,  /* lebih tipis, hampir seperti cahaya halus */
+    transparent 100%
+  );
+  background-size: 150% 100%;
+  animation: shimmer 5s infinite;     /* animasi lebih lambat */
+  pointer-events: none;
+}
+
+/* Animasi border glow */
+@keyframes borderGlow {
+  0% {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+  }
+}
+
+.glowing-border {
+  position: relative;
+  border-radius: 0.5rem; /* sesuaikan dengan rounded-lg */
+  z-index: 0;
+}
+
+.glowing-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  padding: 2px; /* tebal border efek */
+  background: linear-gradient(90deg, #ffffff2c, #ffffff22, #ffffff36);
+  z-index: -1;
+  filter: blur(6px);
+  animation: borderGlow 2.5s infinite alternate;
+}
+
+.red-flare {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.red-flare::before,
+.red-flare::after {
+  content: "";
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(circle at top left, rgba(255,0,0,0.4), transparent 70%);
+  animation: flareMove 1.2s ease-out forwards;
+  pointer-events: none;
+}
+
+.red-flare::after {
+  top: auto;
+  bottom: 0;
+  left: auto;
+  right: 0;
+  background: radial-gradient(circle at bottom right, rgba(255,0,0,0.4), transparent 70%);
+  animation-delay: 0.2s;
+}
+
+@keyframes flareMove {
+  0% {
+    transform: scale(0.5) translate(0,0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2) translate(-10px,-10px);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1) translate(0,0);
+    opacity: 0;
+  }
+}

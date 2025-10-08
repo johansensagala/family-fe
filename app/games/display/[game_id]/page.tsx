@@ -282,6 +282,16 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     }
   };
 
+      const [showFinals, setShowFinals] = useState(false);
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setShowFinals(true);
+      }, 2100); // 2000 ms = 2 detik
+
+      return () => clearTimeout(timer);
+    }, []);
+
     const gradients = [
     ["from-red-500", "to-yellow-500"],
     ["from-yellow-500", "to-green-500"],
@@ -377,10 +387,12 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
     socket.on("set-active-tab-blank", (data: any) => {
       setActiveTab('blank');
+      setShowFinals(false);
     });
 
     socket.on("set-active-tab-main-round", (index) => {
       setActiveTab(index);
+      setShowFinals(false);
       setWrong(0);
       setTeam1TotalScore(0);
       setTeam2TotalScore(0);
@@ -414,26 +426,34 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     socket.on("set-active-tab-final", (data: any) => {
       activeTabRef.current = 'final';
       setActiveTab('final');
-      handleSound('show-final-answer');
+      handleSound('coin');
+
+      setTimeout(() => {
+        setShowFinals(true);
+      }, 2000);
     });
 
     socket.on("set-active-tab-single", (data: any) => {
       setActiveTab('single');
       handleSound('preparation-2');
+      setShowFinals(false);
     });
 
     socket.on("set-active-tab-double", (data: any) => {
       setActiveTab('double');
       handleSound('preparation-2');
+      setShowFinals(false);
     });
 
     socket.on("set-active-tab-bonus", (data: any) => {
       setActiveTab('bonus');
       handleSound('preparation-2');
+      setShowFinals(false);
     });
 
     socket.on("set-active-tab-main", (data: any) => {
       setActiveTab('main');
+      setShowFinals(false);
     });
 
     socket.on("set-active-tab-timer1", (data: any) => {
@@ -441,6 +461,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       setActiveTab('timer1');
       setTimeLeft(initialTime1);
       setIsRunning(false);
+      setShowFinals(false);
     });
 
     socket.on("set-active-tab-timer2", (data: any) => {
@@ -448,6 +469,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       setActiveTab('timer2');
       setTimeLeft(initialTime2);
       setIsRunning(false);
+      setShowFinals(false);
     });
 
     socket.on("set-start-timer", (data: any) => {
@@ -579,13 +601,13 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
   // Setup background audio (hanya sekali)
   useEffect(() => {
-    bgAudioRef1.current = new Audio('/sounds/timer-music-2.mp3');
+    bgAudioRef1.current = new Audio('/sounds/timer-music.mp3');
     bgAudioRef1.current.loop = true;
-    bgAudioRef1.current.volume = 0.2; // set volume ke 50%
+    bgAudioRef1.current.volume = 0.05; // set volume ke 50%
 
-    bgAudioRef2.current = new Audio('/sounds/timer-music-2.mp3');
+    bgAudioRef2.current = new Audio('/sounds/timer-music.mp3');
     bgAudioRef2.current.loop = true;
-    bgAudioRef2.current.volume = 0.2; // set volume ke 50%
+    bgAudioRef2.current.volume = 0.05; // set volume ke 50%
   }, []);
 
   // Timer countdown dan kontrol background music
@@ -896,7 +918,6 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   let content;
 
   if (isFinalRound) {
-
     content = (
       <motion.div
         id="game-container"
@@ -931,7 +952,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                         ref={(el) => (answerRefs.current[i] = el)}
                         id={`finalAnswer-${i + 1}`}
                         className={`inline-block text-3xl pr-6 font-semibold transition-opacity duration-500 whitespace-nowrap ${
-                          finalAnswers[i] ? "opacity-100" : "opacity-0"
+                          showFinals && finalAnswers[i] ? "opacity-100" : "opacity-0"
                         }`}
                       >
                         {finalAnswers[i]}
@@ -944,7 +965,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                       className={getScoreClass(`finalScore-${i + 1}`)}
                       onClick={() => handleScoreClick(`finalScore-${i + 1}`)}
                     >
-                      {finalScores[i] || ""}
+                      {showFinals ? finalScores[i] || "" : ""}
                     </span>
                   </div>
                 </motion.div>
@@ -966,7 +987,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                       className={getScoreClass(`finalScore-${i + 6}`)}
                       onClick={() => handleScoreClick(`finalScore-${i + 6}`)}
                     >
-                      {finalScores[i + 5] || ""}
+                      {showFinals ? finalScores[i + 5] || "" : ""}
                     </span>
 
                     {/* Jawaban dengan fitText */}
@@ -980,7 +1001,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                         ref={(el) => (answerRefs.current[i + 5] = el)}
                         id={`finalAnswer-${i + 6}`}
                         className={`inline-block text-3xl pl-6 font-semibold transition-opacity duration-500 whitespace-nowrap ${
-                          finalAnswers[i + 5] ? "opacity-100" : "opacity-0"
+                          showFinals && finalAnswers[i + 5] ? "opacity-100" : "opacity-0"
                         }`}
                       >
                         {finalAnswers[i + 5]}
@@ -991,11 +1012,11 @@ export default function Family100Game({ params }: { params: { game_id: string } 
               ))}
             </div>
           </div>
-        <div className="text-center mb-6">
-          <span className="inline-block text-4xl text-gray-900 font-semibold bg-white rounded-md px-4 py-2 mt-8">
-            {totalFinalScore}
-          </span>
-        </div>
+          <div className="text-center mb-6">
+            <span className="inline-block text-4xl text-gray-900 font-semibold bg-white rounded-md px-4 py-2 mt-8">
+              {showFinals ? totalFinalScore : "\u00A0"}
+            </span>
+          </div>
       </motion.div>
     );
   } else if (isTimer25 || isTimer30) {
@@ -1111,7 +1132,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       // >
 <motion.div
   id="text-3xl game-container"
-  className="relative mx-auto max-w-3xl w-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 text-white p-4 rounded-lg shadow-lg"
+  className="relative mx-auto max-w-3xl w-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 text-white p-4 rounded-lg shadow-lg glowing-border"
   initial={{ opacity: 0, y: 50 }}
   animate={{ opacity: 1, y: 0 }}
   transition={{ duration: 1.0, ease: "easeOut" }}
@@ -1227,6 +1248,15 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     fontFamily: '"Michroma", sans-serif'
   }}
 >
+  {showIncorrect && activeTab != "final" && (
+    <motion.div
+      className="absolute inset-0 bg-red-500"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 0.4 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    />
+  )}
 
   {content}
 </div>
