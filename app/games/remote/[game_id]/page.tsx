@@ -129,11 +129,47 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const isFinalRound = activeTab === 'final';
   const isTimer25 = activeTab === 'timer1';
   const isTimer30 = activeTab === 'timer2';
-  const singlePoin = activeTab === 'single';
-  const doublePoin = activeTab === 'double';
+
+  // const singlePoin = activeTab === 'single';
+  // const doublePoin = activeTab === 'double';
+
   const bonusRound = activeTab === 'bonus';
   const isBlank = activeTab === 'blank';
   const isMain = activeTab === 'main';
+
+  const pointTypes = [
+    'SINGLE',
+    'DOUBLE',
+    'TRIPLE',
+    'QUADRUPLE',
+    'QUINTUPLE',
+    'SEXTUPLE',
+    'SEPTUPLE',
+    'OCTUPLE',
+    'NONUPLE',
+    'DECUPLE',
+  ] as const;
+
+  type RoundType = typeof pointTypes[number];
+
+  const multipliers: Record<RoundType, number> = {
+      SINGLE: 1,
+      DOUBLE: 2,
+      TRIPLE: 3,
+      QUADRUPLE: 4,
+      QUINTUPLE: 5,
+      SEXTUPLE: 6,
+      SEPTUPLE: 7,
+      OCTUPLE: 8,
+      NONUPLE: 9,
+      DECUPLE: 10
+  };
+
+  const handleTabClick = (type: RoundType) => {
+    setActiveTab(type);
+    handleSound('preparation-2');
+    setActiveTabPointSO(type);
+  };
 
   const fetchGame = async () => {
     if (game_id) {
@@ -145,7 +181,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const handleKeyPress = (event) => {
     const key = parseInt(event.key, 10);
     if (!isNaN(key)) {
-        setCurrentRound(key);
+      setCurrentRound(key);
     }
   };
 
@@ -364,13 +400,9 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     socket.emit("set-active-tab-final", null);
   }
 
-  const setActiveTabSingleSO = () => {
-    socket.emit("set-active-tab-single", null);
-  }
-
-  const setActiveTabDoubleSO = () => {
-    socket.emit("set-active-tab-double", null);
-  }
+  const setActiveTabPointSO = (type: RoundType) => {
+    socket.emit("set-active-tab-point", type);
+  };
 
   const setActiveTabBonusSO = () => {
     socket.emit("set-active-tab-bonus", null);
@@ -636,7 +668,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         </h1>
       </div>
     );
-  } else if (singlePoin) {
+  } else if (pointTypes.includes(activeTab as RoundType)) {
     content = (
       <div
         id="game-container"
@@ -646,24 +678,38 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <h1 className="shine-text m-0 text-[10rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-600 via-gray-300 to-white">
-          SINGLE POIN
-        </h1>
-      </div>
-);
-  } else if (doublePoin) {
-    content = (
-      <div
-        id="game-container"
-        className="relative mx-auto max-w-3xl w-full text-center p-4 rounded-xl"
-        initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-      >
-        <h1 className="shine-text m-0 text-[10rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-600 via-gray-300 to-white">
-          DOUBLE POIN
+          {`${activeTab} POIN`}
         </h1>
       </div>
     );
+  // } else if (singlePoin) {
+  //   content = (
+  //     <div
+  //       id="game-container"
+  //       className="relative mx-auto max-w-3xl w-full text-center p-4 rounded-xl"
+  //       initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+  //       animate={{ opacity: 1, scale: 1, rotate: 0 }}
+  //       transition={{ duration: 0.8, ease: "easeOut" }}
+  //     >
+  //       <h1 className="shine-text m-0 text-[10rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+  //         SINGLE POIN
+  //       </h1>
+  //     </div>
+  //   );
+  // } else if (doublePoin) {
+  //   content = (
+  //     <div
+  //       id="game-container"
+  //       className="relative mx-auto max-w-3xl w-full text-center p-4 rounded-xl"
+  //       initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+  //       animate={{ opacity: 1, scale: 1, rotate: 0 }}
+  //       transition={{ duration: 0.8, ease: "easeOut" }}
+  //     >
+  //       <h1 className="shine-text m-0 text-[10rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+  //         DOUBLE POIN
+  //       </h1>
+  //     </div>
+  //   );
   } else if (isBlank) {
     content = (
       <div>
@@ -742,7 +788,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         <AnswerRow
           answer={answer}
           index={index}
-          multiplier={currentRound.type === 'DOUBLE' ? 2 : 1}
+          multiplier={multipliers[currentRound.type as RoundType] || 1}
           onScoreChange={onScoreChange}
         />
       </div>
@@ -888,30 +934,22 @@ export default function Family100Game({ params }: { params: { game_id: string } 
               Bonus Round
             </button>
           </li>
-          <li>
-            <button
-              className={`w-full py-2 text-3xl font-semibold ${singlePoin ? 'bg-gray-400' : 'bg-blue-800'} rounded-lg`}
-              onClick={() => {
-                setActiveTabSingleSO();
-                setActiveTab('single');
-                handleSound('preparation-2')
-              }}
-            >
-              SINGLE POINT
-            </button>
-          </li>
-          <li>
-            <button
-              className={`w-full py-2 text-3xl font-semibold ${doublePoin ? 'bg-gray-400' : 'bg-blue-800'} rounded-lg`}
-              onClick={() => {
-                setActiveTabDoubleSO();
-                setActiveTab('double');
-                handleSound('preparation-2')
-              }}
-            >
-              DOUBLE POINT
-            </button>
-          </li>
+
+          {pointTypes
+            .filter((type) => game.rounds.some((round) => round.type === type))
+            .map((type) => (
+              <li key={type}>
+                <button
+                  className={`w-full py-2 text-3xl font-semibold ${
+                    activeTab === type ? 'bg-gray-400' : 'bg-blue-800'
+                  } rounded-lg`}
+                  onClick={() => handleTabClick(type)}
+                >
+                  {type} POINT
+                </button>
+              </li>
+          ))}
+
           <li>
             <button
               className={`w-full py-2 text-3xl font-semibold ${bonusRound ? 'bg-gray-400' : 'bg-blue-800'} rounded-lg`}

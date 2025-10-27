@@ -24,6 +24,19 @@ interface RoundInput {
     questionId: number | ''
 }
 
+const pointTypes = [
+    'SINGLE',
+    'DOUBLE',
+    'TRIPLE',
+    'QUADRUPLE',
+    'QUINTUPLE',
+    'SEXTUPLE',
+    'SEPTUPLE',
+    'OCTUPLE',
+    'NONUPLE',
+    'DECUPLE',
+] as const
+
 export default function Game() {
     const router = useRouter()
     const [name, setName] = useState('')
@@ -154,8 +167,11 @@ export default function Game() {
                                     onChange={(e) => handleRoundChange(i, 'type', e.target.value)}
                                     className="w-full px-4 py-2 rounded bg-gray-200 text-gray-900"
                                 >
-                                    <option value="SINGLE">SINGLE</option>
-                                    <option value="DOUBLE">DOUBLE</option>
+                                    {pointTypes.map((type) => (
+                                        <option key={type} value={type}>
+                                            {type}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 

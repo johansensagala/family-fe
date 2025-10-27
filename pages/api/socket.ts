@@ -24,6 +24,22 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
         });
 
         io.on("connection", (socket) => {
+
+            const pointTypes = [
+                'SINGLE',
+                'DOUBLE',
+                'TRIPLE',
+                'QUADRUPLE',
+                'QUINTUPLE',
+                'SEXTUPLE',
+                'SEPTUPLE',
+                'OCTUPLE',
+                'NONUPLE',
+                'DECUPLE',
+            ] as const;
+
+            type RoundType = typeof pointTypes[number];
+
             console.log("Client game connected");
 
             socket.on("handle-incorrect", (data) => {
@@ -58,12 +74,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
                 socket.broadcast.emit("set-active-tab-final", data);
             });
 
-            socket.on("set-active-tab-single", (data) => {
-                socket.broadcast.emit("set-active-tab-single", data);
-            });
-
-            socket.on("set-active-tab-double", (data) => {
-                socket.broadcast.emit("set-active-tab-double", data);
+            socket.on("set-active-tab-point", (type: RoundType) => {
+                socket.broadcast.emit("set-active-tab-point", type);
             });
 
             socket.on("set-active-tab-bonus", (data) => {

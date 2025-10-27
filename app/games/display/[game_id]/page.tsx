@@ -268,6 +268,34 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const isMain = activeTab === 'main';
   const isBlank = activeTab === 'blank';
 
+  const pointTypes = [
+    'SINGLE',
+    'DOUBLE',
+    'TRIPLE',
+    'QUADRUPLE',
+    'QUINTUPLE',
+    'SEXTUPLE',
+    'SEPTUPLE',
+    'OCTUPLE',
+    'NONUPLE',
+    'DECUPLE',
+  ] as const;
+
+  type RoundType = typeof pointTypes[number];
+
+  const multipliers: Record<RoundType, number> = {
+      SINGLE: 1,
+      DOUBLE: 2,
+      TRIPLE: 3,
+      QUADRUPLE: 4,
+      QUINTUPLE: 5,
+      SEXTUPLE: 6,
+      SEPTUPLE: 7,
+      OCTUPLE: 8,
+      NONUPLE: 9,
+      DECUPLE: 10
+  };
+
   const fetchGame = async () => {
     if (game_id) {
       const data = await getGamesById(game_id);
@@ -282,17 +310,17 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     }
   };
 
-      const [showFinals, setShowFinals] = useState(false);
+  const [showFinals, setShowFinals] = useState(false);
 
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        setShowFinals(true);
-      }, 2100); // 2000 ms = 2 detik
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowFinals(true);
+    }, 2100); // 2000 ms = 2 detik
 
-      return () => clearTimeout(timer);
-    }, []);
+    return () => clearTimeout(timer);
+  }, []);
 
-    const gradients = [
+  const gradients = [
     ["from-red-500", "to-yellow-500"],
     ["from-yellow-500", "to-green-500"],
     ["from-green-500", "to-blue-500"],
@@ -431,6 +459,12 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       setTimeout(() => {
         setShowFinals(true);
       }, 2000);
+    });
+
+    socket.on("set-active-tab-point", (type: RoundType) => {
+      setActiveTab(type);
+      handleSound('preparation-2');
+      setShowFinals(false);
     });
 
     socket.on("set-active-tab-single", (data: any) => {
@@ -1033,39 +1067,59 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         </h1>
       </motion.div>
     );
-  } else if (singlePoin) {
+//   } else if (singlePoin) {
+//     content = (
+//       <motion.div
+//         id="game-container"
+//         className="relative mx-auto max-w-3xl w-full text-center
+//                   rounded-3xl overflow-hidden
+//                   bg-gray-800"
+//         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+//         animate={{ opacity: 1, scale: 1, rotate: 0 }}
+//         transition={{ duration: 0.8, ease: "easeOut" }}
+//       >
+//         <h1 className="shine-text m-0 text-[10rem] font-bold
+//                       text-transparent bg-clip-text
+//                       bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+//           SINGLE POIN
+//         </h1>
+//       </motion.div>
+// );
+//   } else if (doublePoin) {
+//     content = (
+//       <motion.div
+//         id="game-container"
+//         className="relative mx-auto max-w-3xl w-full text-center
+//                   rounded-3xl overflow-hidden
+//                   bg-gray-800"
+//         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+//         animate={{ opacity: 1, scale: 1, rotate: 0 }}
+//         transition={{ duration: 0.8, ease: "easeOut" }}
+//       >
+//         <h1 className="shine-text m-0 text-[10rem] font-bold
+//                       text-transparent bg-clip-text
+//                       bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+//           DOUBLE POIN
+//         </h1>
+//       </motion.div>
+//     );
+  } else if (pointTypes.includes(activeTab as RoundType)) {
     content = (
       <motion.div
         id="game-container"
-        className="relative mx-auto max-w-3xl w-full text-center
-                  rounded-3xl overflow-hidden
-                  bg-gray-800"
+        className="shine-text relative mx-auto max-w-4xl w-full text-center
+                  rounded-3xl overflow-hidden bg-gray-800 p-4"
         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <h1 className="shine-text m-0 text-[10rem] font-bold
-                      text-transparent bg-clip-text
-                      bg-gradient-to-r from-gray-600 via-gray-300 to-white">
-          SINGLE POIN
-        </h1>
-      </motion.div>
-);
-  } else if (doublePoin) {
-    content = (
-      <motion.div
-        id="game-container"
-        className="relative mx-auto max-w-3xl w-full text-center
-                  rounded-3xl overflow-hidden
-                  bg-gray-800"
-        initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-      >
-        <h1 className="shine-text m-0 text-[10rem] font-bold
-                      text-transparent bg-clip-text
-                      bg-gradient-to-r from-gray-600 via-gray-300 to-white">
-          DOUBLE POIN
+        <h1
+          className="m-0 text-[clamp(2rem,8vw,10rem)] font-bold
+                    text-transparent bg-clip-text
+                    bg-gradient-to-r from-gray-600 via-gray-300 to-white
+                    bg-[length:200%_100%] animate-[shine_3s_linear_infinite]"
+        >
+          {`${activeTab} POIN`}
         </h1>
       </motion.div>
     );
@@ -1214,7 +1268,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         <AnswerRow
           answer={answer}
           index={index}
-          multiplier={currentRound.type === 'DOUBLE' ? 2 : 1}
+          multiplier={multipliers[currentRound.type as RoundType] || 1}
           onScoreChange={onScoreChange}
           onIncorrectReveal={handleIncorrectReveal}
           onIncorrectRevealWithoutIcon={handleIncorrectRevealWithoutIcon}
