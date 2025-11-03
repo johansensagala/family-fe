@@ -31,9 +31,10 @@ interface AnswerRowProps {
   index: number;
   multiplier?: number;
   onScoreChange: (score: number) => void;
+  correctSound: string;
 }
 
-function AnswerRow({ answer, index, multiplier = 1, onScoreChange }: AnswerRowProps) {
+function AnswerRow({ answer, index, multiplier = 1, onScoreChange, correctSound }: AnswerRowProps) {
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -56,7 +57,7 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange }: AnswerRowPr
 
     setRevealed((prevRevealed) => {
         if (!prevRevealed) {
-            const audioFile = answer.isSurprise ? "/sounds/siren.mp3" : index === 0 ? "/sounds/top-survey.mp3" : "/sounds/correct.mp3";
+            const audioFile = answer.isSurprise ? "/sounds/siren.mp3" : index === 0 ? "/sounds/top-survey.mp3" : `/sounds/${correctSound}.mp3`;
             const audio = new Audio(audioFile);
             audio.currentTime = 0;
             audio.play();
@@ -132,6 +133,9 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
   // const singlePoin = activeTab === 'single';
   // const doublePoin = activeTab === 'double';
+
+  const [incorrectSound, setIncorrectSound] = useState("wrong-1");
+  const [correctSound, setCorrectSound] = useState("correct-1");
 
   const bonusRound = activeTab === 'bonus';
   const isBlank = activeTab === 'blank';
@@ -350,7 +354,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     } text-blue-900 rounded-full`;
 
   const handleIncorrectSO = () => {
-    const audio = new Audio('/sounds/wrong.mp3');
+    const audio = new Audio(`/sounds/${incorrectSound}.mp3`);
     audio.currentTime = 0;
     audio.play(); 
     setShowIncorrect(true);
@@ -450,6 +454,14 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   
   const setSpecialAnswerSO = () => {
     socket.emit("set-sound-special-answer", null);
+  }
+
+  const setIncorrectSoundSO = (incorrectSound: string) => {
+    socket.emit("set-incorrect-sound", incorrectSound);
+  }
+
+  const setCorrectSoundSO = (correctSound: string) => {
+    socket.emit("set-correct-sound", correctSound);
   }
 
   const handleSameAnswer = () => {
@@ -562,6 +574,16 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     audioCashier.play();
 
     setSpecialAnswerSO();
+  }
+
+  const handleIncorrectSound = (incorrectSound: string) => {
+    setIncorrectSound(incorrectSound);
+    setIncorrectSoundSO(incorrectSound);
+  }
+
+  const handleCorrectSound = (correctSound: string) => {
+    setCorrectSound(correctSound);
+    setCorrectSoundSO(correctSound);
   }
 
   if (!game) return <div>Loading...</div>;
@@ -790,6 +812,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           index={index}
           multiplier={multipliers[currentRound.type as RoundType] || 1}
           onScoreChange={onScoreChange}
+          correctSound={correctSound}
         />
       </div>
     ))}
@@ -1140,6 +1163,41 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         </div>
 
         <label className="block text-3xl mt-6">Sound Effect</label>
+
+        <div className="grid grid-cols-3 gap-2 mt-4">
+            {/* 🔻 Pilihan sound untuk Wrong */}
+            {["wrong-1", "wrong-2", "wrong-3"].map((sound, i) => (
+                <button
+                    key={sound}
+                    onClick={() => handleIncorrectSound(sound)}
+                    className={`py-2 rounded-lg font-semibold border transition 
+                        ${incorrectSound === sound
+                            ? "bg-red-600 text-white border-red-700"
+                            : "bg-white text-red-700 border-red-400 hover:bg-red-100"
+                        }`}
+                >
+                    ❌ Wrong {i + 1}
+                </button>
+            ))}
+        </div>
+
+        {/* 🔻 Pilihan sound untuk Correct */}
+        <div className="grid grid-cols-3 gap-2 mt-3">
+            {["correct-1", "correct-2", "correct-3"].map((sound, i) => (
+                <button
+                    key={sound}
+                    onClick={() => handleCorrectSound(sound)}
+                    className={`py-2 rounded-lg font-semibold border transition 
+                        ${correctSound === sound
+                            ? "bg-green-600 text-white border-green-700"
+                            : "bg-white text-green-700 border-green-400 hover:bg-green-100"
+                        }`}
+                >
+                    ✅ Correct {i + 1}
+                </button>
+            ))}
+        </div>
+
         <button 
           className="w-full py-2 bg-blue-400 text-white font-bold rounded-lg mt-2"
           onClick={() => handleSound("preparation")}
@@ -1160,7 +1218,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         </button>
         <button 
           className="w-full py-2 bg-blue-400 text-white font-bold rounded-lg mt-2"
-          onClick={() => handleSound("victory")}
+          onClick={() => handleSound("xmas-victory")}
           >
           Victory
         </button>

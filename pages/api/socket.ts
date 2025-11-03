@@ -134,6 +134,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
                 socket.broadcast.emit("set-sound-special-answer", data);
             });
 
+            socket.on("set-incorrect-sound", (data) => {
+                socket.broadcast.emit("set-incorrect-sound", data);
+            });
+
+            socket.on("set-correct-sound", (data) => {
+                socket.broadcast.emit("set-correct-sound", data);
+            });
+
         });
         
         res.socket.server.io = io;

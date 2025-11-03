@@ -6,6 +6,7 @@ import io from "socket.io-client";
 import '../../../../app/globals.css';
 import { getGamesById } from '../../../../services/gameService';
 import "../../ShineEffect.css";
+import Snowfall from "@/app/Snowfall";
 
 let socket: any;
 
@@ -34,9 +35,10 @@ interface AnswerRowProps {
   onScoreChange: (score: number) => void;
   onIncorrectReveal?: () => void; // ✅ Tambahkan ini untuk menangani klik salah
   onIncorrectRevealWithoutIcon?: () => void; // ✅ Tambahkan ini untuk menangani klik salah
+  correctSound: string;
 }
 
-function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectReveal, onIncorrectRevealWithoutIcon }: AnswerRowProps) {
+function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectReveal, onIncorrectRevealWithoutIcon, correctSound }: AnswerRowProps) {
   const [revealed, setRevealed] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [playFirstSurpriseEffect, setPlayFirstSurpriseEffect] = useState(false);
@@ -104,8 +106,8 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
         const audioFile = answer.isSurprise
           ? "/sounds/siren.mp3"
           : index === 0
-          ? "/sounds/top-survey-2.mp3"
-          : "/sounds/correct-2.mp3";
+          ? "/sounds/top-survey-5.mp3"
+          : `/sounds/${correctSound}.mp3`;
         const audio = new Audio(audioFile);
         audio.currentTime = 0;
         audio.play();
@@ -149,7 +151,7 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
   };
 
   // Tentukan kelas CSS berdasarkan kondisi
-  let classNames = "bg-gray-700 flex items-center justify-between px-4 py-2 rounded-lg shadow cursor-pointer transition-transform duration-300";
+  let classNames = "bg-red-700 flex items-center justify-between px-4 py-2 rounded-lg shadow cursor-pointer transition-transform duration-300";
 
   if (showWarning) {
     classNames += " warning-effect";
@@ -174,7 +176,7 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
         </span>
       </div>
 
-      <span className="text-3xl font-bold flex items-center justify-center w-12 h-12 bg-gray-400 text-blue-900 rounded-md">
+      <span className="text-3xl font-bold flex items-center justify-center w-12 h-12 bg-red-400 text-blue-900 rounded-md">
         {revealed ? answer.poin || "-" : ""}
       </span>
     </div>
@@ -255,6 +257,9 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const bgAudioRef1 = useRef<HTMLAudioElement | null>(null);
   const bgAudioRef2 = useRef<HTMLAudioElement | null>(null);
   
+  const [incorrectSound, setIncorrectSound] = useState("wrong-3");
+  const [correctSound, setCorrectSound] = useState("correct-3");
+
   const { game_id } = use(params);
   
   const totalFinalScore = finalScores.reduce((acc, curr) => acc + Number(curr || 0), 0);
@@ -446,7 +451,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       if (flipCount) {
         for (let i = 0; i < flipCount; i++) {
           const delay = BASE_DELAY + i * STAGGER_TIME;
-          playWithDelay('/sounds/flip.mp3', delay);
+          playWithDelay('/sounds/flip-4.mp3', delay);
         }
       }
     });
@@ -463,25 +468,25 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 
     socket.on("set-active-tab-point", (type: RoundType) => {
       setActiveTab(type);
-      handleSound('preparation-2');
+      handleSound('xmas-preparation');
       setShowFinals(false);
     });
 
     socket.on("set-active-tab-single", (data: any) => {
       setActiveTab('single');
-      handleSound('preparation-2');
+      handleSound('xmas-preparation');
       setShowFinals(false);
     });
 
     socket.on("set-active-tab-double", (data: any) => {
       setActiveTab('double');
-      handleSound('preparation-2');
+      handleSound('xmas-preparation');
       setShowFinals(false);
     });
 
     socket.on("set-active-tab-bonus", (data: any) => {
       setActiveTab('bonus');
-      handleSound('preparation-2');
+      handleSound('xmas-preparation');
       setShowFinals(false);
     });
 
@@ -600,7 +605,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         [finalTopAnswerIndexSO]: !prev[finalTopAnswerIndexSO],
       }));
   
-      const audio = new Audio('/sounds/top-survey.mp3');
+      const audio = new Audio('/sounds/top-survey-5.mp3');
       audio.currentTime = 0;
       audio.play();
     });
@@ -621,6 +626,14 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       const audioCashier = new Audio("/sounds/cashier.mp3"); 
       audioCashier.currentTime = 0.2;
       audioCashier.play();
+    });
+
+    socket.on("set-incorrect-sound", (data: any) => {
+      setIncorrectSound(data);
+    });
+
+    socket.on("set-correct-sound", (data: any) => {
+      setCorrectSound(data);
     });
 
   }, []);
@@ -856,7 +869,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         });
     }
 
-    const audio = tempFinalScore != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/incorrect.mp3')
+    const audio = tempFinalScore != "0" ? new Audio('/sounds/correct.mp3') : new Audio(`/sounds/${incorrectSound}.mp3`)
     audio.currentTime = 0;
     audio.play();
 
@@ -892,7 +905,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   }
 
   const handleIncorrectReveal = () => {
-    const audio = new Audio('/sounds/wrong.mp3');
+    const audio = new Audio(`/sounds/${incorrectSound}.mp3`);
     audio.currentTime = 0;
     audio.play();
 
@@ -955,7 +968,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     content = (
       <motion.div
         id="game-container"
-        className="text-3xl relative mx-auto max-w-4xl w-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 text-white p-4 py-8 rounded-lg shadow-lg"
+        className="text-3xl relative mx-auto max-w-4xl w-full bg-gradient-to-r from-red-800 via-red-700 to-red-600 text-white p-4 py-8 rounded-lg shadow-lg"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
@@ -974,7 +987,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: i * 0.2 }}
                 >
-                  <div className="bg-gradient-to-r from-gray-700 to-gray-600 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer">
+                  <div className="bg-gradient-to-r from-red-700 to-red-600 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer">
                     {/* Jawaban dengan fitText */}
                     <div
                       ref={(el) => (containerRefs.current[i] = el)}
@@ -1014,7 +1027,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: (i + 5) * 0.2 }}
                 >
-                  <div className="bg-gradient-to-r from-gray-700 to-gray-600 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer">
+                  <div className="bg-gradient-to-r from-red-700 to-red-600 flex items-center justify-between px-4 py-3 rounded-lg shadow cursor-pointer">
                     {/* Skor */}
                     <span
                       id={`finalScore-${i + 6}`}
@@ -1047,7 +1060,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
             </div>
           </div>
           <div className="text-center mb-6">
-            <span className="inline-block text-4xl text-gray-900 font-semibold bg-white rounded-md px-4 py-2 mt-8">
+            <span className="inline-block text-4xl text-red-900 font-semibold bg-white rounded-md px-4 py-2 mt-8">
               {showFinals ? totalFinalScore : "\u00A0"}
             </span>
           </div>
@@ -1062,7 +1075,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <h1 className="m-0 text-[25rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+        <h1 className="m-0 text-[25rem] font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-red-300 to-white">
           {timeLeft}
         </h1>
       </motion.div>
@@ -1073,14 +1086,14 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 //         id="game-container"
 //         className="relative mx-auto max-w-3xl w-full text-center
 //                   rounded-3xl overflow-hidden
-//                   bg-gray-800"
+//                   bg-red-800"
 //         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
 //         animate={{ opacity: 1, scale: 1, rotate: 0 }}
 //         transition={{ duration: 0.8, ease: "easeOut" }}
 //       >
 //         <h1 className="shine-text m-0 text-[10rem] font-bold
 //                       text-transparent bg-clip-text
-//                       bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+//                       bg-gradient-to-r from-red-600 via-red-300 to-white">
 //           SINGLE POIN
 //         </h1>
 //       </motion.div>
@@ -1091,14 +1104,14 @@ export default function Family100Game({ params }: { params: { game_id: string } 
 //         id="game-container"
 //         className="relative mx-auto max-w-3xl w-full text-center
 //                   rounded-3xl overflow-hidden
-//                   bg-gray-800"
+//                   bg-red-800"
 //         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
 //         animate={{ opacity: 1, scale: 1, rotate: 0 }}
 //         transition={{ duration: 0.8, ease: "easeOut" }}
 //       >
 //         <h1 className="shine-text m-0 text-[10rem] font-bold
 //                       text-transparent bg-clip-text
-//                       bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+//                       bg-gradient-to-r from-red-600 via-red-300 to-white">
 //           DOUBLE POIN
 //         </h1>
 //       </motion.div>
@@ -1108,7 +1121,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
       <motion.div
         id="game-container"
         className="shine-text relative mx-auto max-w-4xl w-full text-center
-                  rounded-3xl overflow-hidden bg-gray-800 p-4"
+                  rounded-3xl overflow-hidden bg-red-800 p-4"
         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
@@ -1116,7 +1129,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         <h1
           className="m-0 text-[clamp(2rem,8vw,10rem)] font-bold
                     text-transparent bg-clip-text
-                    bg-gradient-to-r from-gray-600 via-gray-300 to-white
+                    bg-gradient-to-r from-red-600 via-red-300 to-white
                     bg-[length:200%_100%] animate-[shine_3s_linear_infinite]"
         >
           {`${activeTab} POIN`}
@@ -1130,14 +1143,14 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         id="game-container"
         className="relative mx-auto max-w-3xl w-full text-center
                   rounded-3xl overflow-hidden
-                  bg-gray-800"
+                  bg-red-800"
         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
         animate={{ opacity: 1, scale: 1, rotate: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <h1 className="shine-text m-0 text-[10rem] font-bold
                       text-transparent bg-clip-text
-                      bg-gradient-to-r from-gray-600 via-gray-300 to-white">
+                      bg-gradient-to-r from-red-600 via-red-300 to-white">
           BONUS ROUND
         </h1>
       </motion.div>
@@ -1182,25 +1195,26 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         // initial={{ opacity: 0, y: 30, scale: 0.95 }}
         // animate={{ opacity: 1, y: 0, scale: 1 }}
         // transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
-        // className="bg-gradient-to-br from-white via-gray-100 to-blue-50 text-gray-900 p-5 rounded-2xl shadow-2xl border border-blue-200 transform hover:scale-[1.02] transition-transform duration-300"
+        // className="bg-gradient-to-br from-white via-red-100 to-blue-50 text-red-900 p-5 rounded-2xl shadow-2xl border border-blue-200 transform hover:scale-[1.02] transition-transform duration-300"
       // >
 <motion.div
   id="text-3xl game-container"
-  className="relative mx-auto max-w-3xl w-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-600 text-white p-4 rounded-lg shadow-lg glowing-border"
+  className="relative mx-auto max-w-3xl w-full bg-gradient-to-r from-red-800 via-red-700 to-red-600 text-white p-4 rounded-2xl shadow-lg border border-red-300/40"
   initial={{ opacity: 0, y: 50 }}
   animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 1.0, ease: "easeOut" }}
+  transition={{ duration: 1.0, ease: 'easeOut' }}
 >
   <div className="absolute left-0 transform -translate-x-[200%]">
-    <div className="bg-gradient-to-r from-gray-600 to-gray-500 p-4 rounded-lg shadow-lg text-center">
-      <h2 className="text-2xl font-bold text-white mb-2">Score Tim 1</h2>
-      <p className="text-3xl font-extrabold text-white">{team1Score}</p>
+    <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-500 p-4 rounded-2xl shadow-lg text-center border border-red-300/50">
+      <h2 className="text-2xl font-bold text-white mb-2 drop-shadow-md">Score Tim 1</h2>
+      <p className="text-4xl font-extrabold text-white drop-shadow-lg">{team1Score}</p>
     </div>
   </div>
+
   <div className="absolute right-0 transform translate-x-[200%]">
-    <div className="bg-gradient-to-r from-gray-600 to-gray-500 p-4 rounded-lg shadow-lg text-center">
-      <h2 className="text-2xl font-bold text-white mb-2">Score Tim 2</h2>
-      <p className="text-3xl font-extrabold text-white">{team2Score}</p>
+    <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-500 p-4 rounded-2xl shadow-lg text-center border border-red-300/50">
+      <h2 className="text-2xl font-bold text-white mb-2 drop-shadow-md">Score Tim 2</h2>
+      <p className="text-4xl font-extrabold text-white drop-shadow-lg">{team2Score}</p>
     </div>
   </div>
   <div className="absolute left-0 transform -translate-x-[100%]">
@@ -1243,7 +1257,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     </div>
   )}
   <div className="w-full flex justify-center">
-    <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-gray-400 to-gray-300 text-blue-900 inline-block px-4 py-4 mb-4 rounded-lg">
+    <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-red-400 to-red-300 text-blue-900 inline-block px-4 py-4 mb-4 rounded-lg">
       {team1TotalScore + team2TotalScore}
     </h1>
   </div>
@@ -1272,6 +1286,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           onScoreChange={onScoreChange}
           onIncorrectReveal={handleIncorrectReveal}
           onIncorrectRevealWithoutIcon={handleIncorrectRevealWithoutIcon}
+          correctSound={correctSound}
         />
       </motion.div>
     ))}
@@ -1283,7 +1298,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     content = (
       <div id="game-container" className="relative ml-56 max-w-3xl w-full bg-blue-800 text-white p-4 rounded-xl shadow-lg">
         <div className="flex justify-center my-48">
-          <div className="flex items-center justify-center bg-gray-400 rounded-full w-48 h-48">
+          <div className="flex items-center justify-center bg-red-400 rounded-full w-48 h-48">
             <h1 className="m-0 text-9xl font-bold text-blue-800">20</h1>
           </div>
         </div>
@@ -1292,27 +1307,28 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   }
 
   return (
-<div className="relative bg-cover bg-center min-h-screen flex items-center justify-center uppercase"
-  style={{
-    backgroundImage: "url('/background/black.webp')",
-    backgroundSize: "100%",
-    backgroundRepeat: "repeat",
-    backgroundPosition: "center",
-    imageRendering: "auto",
-    fontFamily: '"Michroma", sans-serif'
-  }}
->
-  {showIncorrect && activeTab != "final" && (
-    <motion.div
-      className="absolute inset-0 bg-red-500"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.4 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-    />
-  )}
+    <div className="relative bg-cover bg-center min-h-screen flex items-center justify-center uppercase"
+      style={{
+        backgroundImage: "url('/background/background-1.gif')",
+        backgroundSize: "100%",
+        backgroundRepeat: "repeat",
+        backgroundPosition: "center",
+        imageRendering: "auto",
+        fontFamily: '"Michroma", sans-serif'
+      }}
+    >
+      <Snowfall count={180} speed={1.2} sizeRange={[1, 4]} />
+      {showIncorrect && activeTab != "final" && (
+        <motion.div
+          className="absolute inset-0 bg-red-500"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.4 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        />
+      )}
 
-  {content}
-</div>
+      {content}
+    </div>
   );
 }
