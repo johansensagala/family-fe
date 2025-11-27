@@ -58,9 +58,9 @@ export const createQuestion = async (payload: {
     return await res.json();
 };
 
-export const getAllQuestions = async () => {
-    const res = await fetch(`${BASE_URL}/games/questions`);
-    
+export const getAllQuestions = async (search = "") => {
+    const res = await fetch(`${BASE_URL}/games/questions?search=${search}`);
+
     if (!res.ok) {
         const msg = await res.text();
         throw new Error(`Failed to fetch questions: ${msg}`);

@@ -4,7 +4,9 @@ import { createGameWithRounds, getAllQuestions } from '@/services/gameService'
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useDebounce } from 'use-debounce';
 import Swal from 'sweetalert2'
+import Select from "react-select"
 
 interface Answer {
     id: number
@@ -43,14 +45,16 @@ export default function Game() {
     const [rounds, setRounds] = useState<RoundInput[]>([{ type: 'SINGLE', questionId: '' }])
     const [questions, setQuestions] = useState<Question[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [search, setSearch] = useState("");
+    const [debouncedSearch] = useDebounce(search, 500);
 
     useEffect(() => {
-        const fetchQuestions = async () => {
-            const data = await getAllQuestions()
-            setQuestions(data)
-        }
-        fetchQuestions()
-    }, [])
+        const load = async () => {
+            const data = await getAllQuestions(debouncedSearch);
+            setQuestions(data);
+        };
+        load();
+    }, [debouncedSearch]);
 
     const handleRoundChange = (index: number, field: keyof RoundInput, value: any) => {
         const updatedRounds = [...rounds]
@@ -177,19 +181,37 @@ export default function Game() {
 
                             <div>
                                 <label className="block mb-1">Select Question:</label>
-                                <select
-                                    value={round.questionId}
-                                    onChange={(e) => handleRoundChange(i, 'questionId', Number(e.target.value))}
-                                    className="w-full px-4 py-2 rounded bg-gray-200 text-gray-900"
-                                    required
-                                >
-                                    <option value="">-- Select Question --</option>
-                                    {questions.map((q) => (
-                                        <option key={q.id} value={q.id}>
-                                            {q.question} ({q.answers.length} answer)
-                                        </option>
-                                    ))}
-                                </select>
+                                <Select
+                                    options={questions.map(q => ({
+                                        value: q.id,
+                                        label: `${q.question} (${q.answers.length} answer${q.answers.length > 1 ? "s" : ""})`
+                                    }))}
+                                    value={
+                                        questions.find(q => q.id === round.questionId)
+                                            ? {
+                                                    value: round.questionId,
+                                                    label: questions.find(q => q.id === round.questionId)?.question
+                                            }
+                                            : null
+                                    }
+                                    onChange={(selected) =>
+                                        handleRoundChange(i, "questionId", selected?.value || "")
+                                    }
+                                    placeholder="Search question..."
+                                    isSearchable={true}
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            backgroundColor: "#e5e7eb", // Tailwind gray-200
+                                            borderRadius: "0.375rem",
+                                            padding: "2px",
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            color: "black",
+                                        }),
+                                    }}
+                                />
                             </div>
                         </div>
                     ))}
