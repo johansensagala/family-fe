@@ -4,7 +4,9 @@ import { getAllQuestions, getGameById, updateGame } from '@/services/gameService
 import { ArrowLeft } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useDebounce } from 'use-debounce';
 import Swal from 'sweetalert2'
+import Select from "react-select"
 
 interface Question {
     id: number
@@ -39,13 +41,15 @@ export default function EditGame() {
     const [questions, setQuestions] = useState<Question[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
+    const [search, setSearch] = useState("");
+    const [debouncedSearch] = useDebounce(search, 500);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const [gameData, questionsData] = await Promise.all([
                     getGameById(gameId),
-                    getAllQuestions(),
+                    getAllQuestions(debouncedSearch),
                 ])
 
                 setName(gameData.name || '')
@@ -199,19 +203,37 @@ export default function EditGame() {
 
                             <div>
                                 <label className="block mb-1">Select Question:</label>
-                                <select
-                                    value={round.questionId}
-                                    onChange={(e) => handleRoundChange(i, 'questionId', Number(e.target.value))}
-                                    className="w-full px-4 py-2 rounded bg-gray-200 text-gray-900"
-                                    required
-                                >
-                                    <option value="">-- Select Question --</option>
-                                    {questions.map((q) => (
-                                        <option key={q.id} value={q.id}>
-                                            {q.question}
-                                        </option>
-                                    ))}
-                                </select>
+                                <Select
+                                    options={questions.map(q => ({
+                                        value: q.id,
+                                        label: `${q.question} (${q.answers.length} answer${q.answers.length > 1 ? "s" : ""})`
+                                    }))}
+                                    value={
+                                        questions.find(q => q.id === round.questionId)
+                                            ? {
+                                                    value: round.questionId,
+                                                    label: questions.find(q => q.id === round.questionId)?.question
+                                            }
+                                            : null
+                                    }
+                                    onChange={(selected) =>
+                                        handleRoundChange(i, "questionId", selected?.value || "")
+                                    }
+                                    placeholder="Search question..."
+                                    isSearchable={true}
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            backgroundColor: "#e5e7eb", // Tailwind gray-200
+                                            borderRadius: "0.375rem",
+                                            padding: "2px",
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            color: "black",
+                                        }),
+                                    }}
+                                />
                             </div>
                         </div>
                     ))}

@@ -36,9 +36,10 @@ interface AnswerRowProps {
   onIncorrectReveal?: () => void; // ✅ Tambahkan ini untuk menangani klik salah
   onIncorrectRevealWithoutIcon?: () => void; // ✅ Tambahkan ini untuk menangani klik salah
   correctSound: string;
+  incorrectSound: string;
 }
 
-function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectReveal, onIncorrectRevealWithoutIcon, correctSound }: AnswerRowProps) {
+function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectReveal, onIncorrectRevealWithoutIcon, correctSound, incorrectSound }: AnswerRowProps) {
   const [revealed, setRevealed] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [playFirstSurpriseEffect, setPlayFirstSurpriseEffect] = useState(false);
@@ -131,7 +132,7 @@ function AnswerRow({ answer, index, multiplier = 1, onScoreChange, onIncorrectRe
         onScoreChange(answer.poin * multiplier);
       } else {
         // Sudah terbuka, artinya salah tekan
-        const audio = new Audio("/sounds/wrong.mp3");
+        const audio = new Audio(`/sounds/${incorrectSound}.mp3`);
         audio.currentTime = 0;
         audio.play();
 
@@ -208,7 +209,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const activePlayerRef = useRef(activePlayer);
   useEffect(() => {
     activePlayerRef.current = activePlayer;
-  }, [activePlayer]);
+  }, [activePlayer]); 
 
   const [team1TempScore, setTeam1TempScore] = useState(0);
   const [team2TempScore, setTeam2TempScore] = useState(0);
@@ -258,7 +259,16 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   const bgAudioRef2 = useRef<HTMLAudioElement | null>(null);
   
   const [incorrectSound, setIncorrectSound] = useState("wrong-3");
+  const incorrectSoundRef = useRef(incorrectSound);
+  useEffect(() => {
+    incorrectSoundRef.current = incorrectSound;
+  }, [incorrectSound]);
+
   const [correctSound, setCorrectSound] = useState("correct-3");
+  const correctSoundRef = useRef(correctSound);
+  useEffect(() => {
+    correctSoundRef.current = correctSound;
+  }, [correctSound]);
 
   const { game_id } = use(params);
   
@@ -590,7 +600,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         });
       }
 
-      const audio = tempFinalScoreSO != "0" ? new Audio('/sounds/correct.mp3') : new Audio('/sounds/wrong.mp3');
+      const audio = tempFinalScoreSO != "0" ? new Audio(`/sounds/${correctSoundRef.current}.mp3`) : new Audio(`/sounds/${incorrectSoundRef.current}.mp3`);
       audio.currentTime = 0;
       audio.play();
 
@@ -629,7 +639,10 @@ export default function Family100Game({ params }: { params: { game_id: string } 
     });
 
     socket.on("set-incorrect-sound", (data: any) => {
+      console.log("incorrect sound: " + incorrectSound)
       setIncorrectSound(data);
+      console.log("ani ani")
+      console.log("inilah data: " + data);
     });
 
     socket.on("set-correct-sound", (data: any) => {
@@ -869,7 +882,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         });
     }
 
-    const audio = tempFinalScore != "0" ? new Audio('/sounds/correct.mp3') : new Audio(`/sounds/${incorrectSound}.mp3`)
+    const audio = tempFinalScore != "0" ? new Audio('/sounds/correct.mp3') : new Audio(`/sounds/${incorrectSoundRef.current}.mp3`)
     audio.currentTime = 0;
     audio.play();
 
@@ -905,7 +918,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   }
 
   const handleIncorrectReveal = () => {
-    const audio = new Audio(`/sounds/${incorrectSound}.mp3`);
+    const audio = new Audio(`/sounds/${incorrectSoundRef.current}.mp3`);
     audio.currentTime = 0;
     audio.play();
 
@@ -918,7 +931,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
   };
   
   const handleIncorrectRevealWithoutIcon = () => {
-    const audio = new Audio('/sounds/wrong.mp3');
+    const audio = new Audio(`/sounds/${incorrectSoundRef.current}.mp3`);
     audio.currentTime = 0;
     audio.play();
 
@@ -1286,7 +1299,8 @@ export default function Family100Game({ params }: { params: { game_id: string } 
           onScoreChange={onScoreChange}
           onIncorrectReveal={handleIncorrectReveal}
           onIncorrectRevealWithoutIcon={handleIncorrectRevealWithoutIcon}
-          correctSound={correctSound}
+          correctSound={correctSoundRef.current}
+          incorrectSound={incorrectSoundRef.current}
         />
       </motion.div>
     ))}
