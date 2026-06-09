@@ -986,11 +986,6 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        {/* {showIncorrect && (
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-9xl text-red-500 font-bold animate-pulse">
-            ❌
-          </div>
-        )} */}
           <div className="flex gap-4">
             <div className="flex flex-col w-1/2 space-y-2">
               {Array.from({ length: 5 }, (_, i) => (
@@ -1093,43 +1088,7 @@ export default function Family100Game({ params }: { params: { game_id: string } 
         </h1>
       </motion.div>
     );
-//   } else if (singlePoin) {
-//     content = (
-//       <motion.div
-//         id="game-container"
-//         className="relative mx-auto max-w-3xl w-full text-center
-//                   rounded-3xl overflow-hidden
-//                   bg-red-800"
-//         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-//         animate={{ opacity: 1, scale: 1, rotate: 0 }}
-//         transition={{ duration: 0.8, ease: "easeOut" }}
-//       >
-//         <h1 className="shine-text m-0 text-[10rem] font-bold
-//                       text-transparent bg-clip-text
-//                       bg-gradient-to-r from-red-600 via-red-300 to-white">
-//           SINGLE POIN
-//         </h1>
-//       </motion.div>
-// );
-//   } else if (doublePoin) {
-//     content = (
-//       <motion.div
-//         id="game-container"
-//         className="relative mx-auto max-w-3xl w-full text-center
-//                   rounded-3xl overflow-hidden
-//                   bg-red-800"
-//         initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-//         animate={{ opacity: 1, scale: 1, rotate: 0 }}
-//         transition={{ duration: 0.8, ease: "easeOut" }}
-//       >
-//         <h1 className="shine-text m-0 text-[10rem] font-bold
-//                       text-transparent bg-clip-text
-//                       bg-gradient-to-r from-red-600 via-red-300 to-white">
-//           DOUBLE POIN
-//         </h1>
-//       </motion.div>
-//     );
-  } else if (pointTypes.includes(activeTab as RoundType)) {
+} else if (pointTypes.includes(activeTab as RoundType)) {
     content = (
       <motion.div
         id="game-container"

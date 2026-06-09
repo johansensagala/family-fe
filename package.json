@@ -9,13 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "axios": "^1.7.9",
     "framer-motion": "^12.7.2",
     "lucide-react": "^0.525.0",
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-select": "^5.10.2",
-    "react-textfit": "^1.1.1",
+    "react-select-async-paginate": "^0.7.6",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.22.2",

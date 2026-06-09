@@ -1,172 +1,163 @@
+import { fetchWithAuth } from "./authService";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export const getItemById = async (id: string) => {
-    const res = await fetch(`${BASE_URL}/items/${id}`);
-    return await res.json();
-};
+// ==========================================
+// 1. ITEMS API
+// ==========================================
 
-export const updateItem = async (id: string, item: any) => {
-    const res = await fetch(`${BASE_URL}/items/${id}`, {
+export const getItemById = (id: string) => fetchWithAuth(`/items/${id}`);
+
+export const createItem = (item: { name: string; description: string }) => 
+    fetchWithAuth('/items', {
+        method: 'POST',
+        body: JSON.stringify(item),
+    });
+
+export const updateItem = (id: string, item: any) => 
+    fetchWithAuth(`/items/${id}`, {
         method: 'PUT',
         body: JSON.stringify(item),
-        headers: { 'Content-Type': 'application/json' },
-    });
-    return await res.json();
-};
-
-export async function createItem(item: { name: string; description: string }) {
-    const response = await fetch(`${BASE_URL}/items`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(item),
     });
 
-    if (!response.ok) {
-        throw new Error('Failed to create item');
-    }
-    return response.json();
-}
+// ==========================================
+// 2. QUESTIONS API
+// ==========================================
 
-// GAMES
-export const getAllGames = async () => {
-    const res = await fetch(`${BASE_URL}/games`);
-    return await res.json();
-};
+export const getAllQuestions = (search = "", limit = 10, offset = 0) => 
+    fetchWithAuth(`/games/questions?search=${search}&limit=${limit}&offset=${offset}`);
 
-export const getGamesById = async (id: string) => {
-    const res = await fetch(`${BASE_URL}/games/${id}`);
-    return await res.json();
-};
-    
-export const createQuestion = async (payload: {
+export const getQuestionById = (id: number | string) => 
+    fetchWithAuth(`/games/questions/${id}`);
+
+export const createQuestion = (payload: {
     question: string;
     answers: { answer: string; poin: number; isSurprise: boolean }[];
-    }) => {
-        const res = await fetch(`${BASE_URL}/games/questions/add`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
+}) => fetchWithAuth('/games/questions/add', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+});
 
-        if (!res.ok) {
-            const msg = await res.text();
-            throw new Error(`Failed to create question: ${msg}`);
-        }
-
-    return await res.json();
-};
-
-export const getAllQuestions = async (search = "") => {
-    const res = await fetch(`${BASE_URL}/games/questions?search=${search}`);
-
-    if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Failed to fetch questions: ${msg}`);
-    }
-
-    return await res.json();
-};
-
-export async function getQuestionById(id: number | string) {
-    const res = await fetch(`${BASE_URL}/games/questions/${id}`);
-    
-    if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Failed to fetch question: ${msg}`);
-    }
-
-    return await res.json();
-}
-
-export async function updateQuestion(id: number | string, payload: any) {
-    const res = await fetch(`${BASE_URL}/games/questions/${id}`, {
+export const updateQuestion = (id: number | string, payload: any) => 
+    fetchWithAuth(`/games/questions/${id}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
     });
 
-    if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Failed to update question: ${msg}`);
-    }
+/**
+ * Menghapus pertanyaan berdasarkan ID
+ */
+export const deleteQuestion = (id: number | string) => 
+    fetchWithAuth(`/games/questions/${id}`, {
+        method: 'DELETE',
+    });
 
-    return await res.json();
-}
+// ==========================================
+// 3. GAMES API
+// ==========================================
 
-export async function createGameWithRounds(payload: {
+export const getAllGames = (limit = 10, offset = 0, include = "", search = "") => 
+    fetchWithAuth(`/games?limit=${limit}&offset=${offset}&include=${include}&search=${search}`);
+
+export const getGameById = (id: number | string) => fetchWithAuth(`/games/${id}`);
+
+export const createGameWithRounds = (payload: {
     name: string;
     description?: string;
     rounds: {
         questionId: string | number;
-        order: number;
-        double: boolean;
-    }[];
-}) {
-    const res = await fetch(`${BASE_URL}/games`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Failed to create game with rounds: ${msg}`);
-    }
-
-    return await res.json();
-}
-
-// Get a single game by ID
-export const getGameById = async (id: number | string) => {
-    const res = await fetch(`${BASE_URL}/games/${id}`);
-
-    if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Failed to fetch game: ${msg}`);
-    }
-
-    return await res.json();
-};
-
-// Update an existing game
-export const updateGame = async (id: number | string, payload: {
-    name: string;
-    rounds: {
-        questionId: number | string;
         type: string;
     }[];
-}) => {
-    const res = await fetch(`${BASE_URL}/games/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+}) => fetchWithAuth('/games', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+});
+
+export const updateGame = (id: number | string, payload: {
+    name: string;
+    rounds: { questionId: number | string; type: string }[];
+}) => fetchWithAuth(`/games/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+});
+
+export const generateRandomGame = () => 
+    fetchWithAuth('/games/generate-random', {
+        method: 'POST',
+    });
+
+export const deleteGame = (id: number | string) => 
+    fetchWithAuth(`/games/${id}`, {
+        method: 'DELETE',
+    });
+
+// ==========================================
+// CATEGORIES API
+// ==========================================
+
+export const getAllCategories = () => 
+    fetchWithAuth('/games/categories');
+
+export const createCategory = (payload: { name: string; description?: string }) => 
+    fetchWithAuth('/games/categories', {
+        method: 'POST',
         body: JSON.stringify(payload),
     });
 
-    if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Failed to update game: ${msg}`);
-    }
-
-    return await res.json();
-};
-
-// Generate random game
-export const generateRandomGame = async () => {
-    const res = await fetch(`${BASE_URL}/games/generate-random`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+export const updateCategory = (id: number | string, payload: { name?: string; description?: string }) => 
+    fetchWithAuth(`/games/categories/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
     });
 
-    if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Failed to generate random game: ${msg}`);
-    }
+export const deleteCategory = (id: number | string) => 
+    fetchWithAuth(`/games/categories/${id}`, {
+        method: 'DELETE',
+    });
 
-    return await res.json();
-};
+// ==========================================
+// 4. STATISTICS & REVIEWS API
+// ==========================================
+
+/**
+ * Menambah review baru (UserId diambil dari JWT di Backend)
+ */
+export const addGameReview = (payload: { 
+    gameId: number; 
+    rating: number; 
+    comment?: string 
+}) => fetchWithAuth('/statistics/reviews', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+});
+
+/**
+ * Mendapatkan semua review untuk satu game
+ */
+export const getGameReviews = (gameId: number | string) => 
+    fetchWithAuth(`/statistics/reviews/${gameId}`);
+
+/**
+ * 1. Update/Edit Review yang sudah ada
+ * Menyesuaikan dengan backend: @Patch('reviews/:id')
+ */
+export const updateGameReview = (id: number | string, payload: { rating: number; comment?: string }) => 
+    fetchWithAuth(`/statistics/reviews/${id}`, {
+        method: 'PATCH', // 👈 WAJIB PATCH: karena di backend kamu pakai @Patch
+        body: JSON.stringify(payload),
+    });
+
+/**
+ * 2. Delete/Hapus Review berdasarkan ID Review
+ * Menyesuaikan dengan backend: @Delete('reviews/:id')
+ */
+export const deleteGameReview = (id: number | string) => 
+    fetchWithAuth(`/statistics/reviews/${id}`, {
+        method: 'DELETE',
+    });
+
+export const recordGameInteraction = (gameId: number | string, type: 'view' | 'play' | 'share') => 
+    fetchWithAuth(`/statistics/record/${gameId}?type=${type}`, {
+        method: 'POST',
+    });
+

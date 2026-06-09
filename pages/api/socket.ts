@@ -17,133 +17,153 @@ export const config = {
     },
 };
 
+const liveRooms: Record<string, { game_id: string; remote: string | null; display: string | null }> = {};
+
 export default function handler(req: NextApiRequest, res: NextApiResponseWithSocket) {
     if (!res.socket.server.io) {
+        console.log("Inisialisasi Multi-Room Socket Server...");
         const io = new IOServer(res.socket.server, {
             path: "/api/socket",
+            cors: { origin: "*" }
         });
 
         io.on("connection", (socket) => {
 
-            const pointTypes = [
-                'SINGLE',
-                'DOUBLE',
-                'TRIPLE',
-                'QUADRUPLE',
-                'QUINTUPLE',
-                'SEXTUPLE',
-                'SEPTUPLE',
-                'OCTUPLE',
-                'NONUPLE',
-                'DECUPLE',
-            ] as const;
+            // =========================================================
+            // 1. DISPLAY: MEMBUAT ROOM BARU
+            // =========================================================
+            socket.on("create-room", ({ game_id, room_code }: { game_id: string; room_code: string }) => {
+                if (!game_id || !room_code) return;
 
-            type RoundType = typeof pointTypes[number];
+                if (liveRooms[room_code]) {
+                    socket.emit("room-error", { message: "Kode kamar sudah terpakai, silakan coba lagi." });
+                    return;
+                }
 
-            console.log("Client game connected");
+                liveRooms[room_code] = {
+                    game_id,
+                    display: socket.id,
+                    remote: null
+                };
 
-            socket.on("handle-incorrect", (data) => {
-                socket.broadcast.emit("handle-incorrect", data);
-            });
+                socket.data = { room_code, role: "display" };
+                socket.join(`session-${room_code}`);
 
-            socket.on("set-minus-wrong", (data) => {
-                socket.broadcast.emit("set-minus-wrong", data);
-            });
-
-            socket.on("set-plus-wrong", (data) => {
-                socket.broadcast.emit("set-plus-wrong", data);
+                socket.emit("room-status", { success: true, message: `Room ${room_code} berhasil dibuat.` });
+                console.log(`[CREATE] Display membuat Room: ${room_code} untuk Game ID: ${game_id}`);
             });
 
-            socket.on("set-question-visible", (data) => {
-                socket.broadcast.emit("set-question-visible", data);
+            // =========================================================
+            // 2. REMOTE: BERGABUNG KE ROOM (Dengan Validasi Match Game ID)
+            // =========================================================
+            socket.on("join-room", ({ room_code, game_id }: { room_code: string; game_id: string }) => {
+                if (!room_code || !game_id) {
+                    socket.emit("room-error", { message: "Data tidak lengkap (Kode Kamar & Game ID diperlukan)!" });
+                    return;
+                }
+                
+                const room = liveRooms[room_code];
+
+                // 1. Validasi apakah kamar terdaftar
+                if (!room) {
+                    socket.emit("room-error", { message: "Kode kamar tidak ditemukan atau sudah hangus!" });
+                    return;
+                }
+
+                // 2. VALIDASI KRITIS: Pastikan Game ID yang diminta remote MATCH dengan Game ID milik Display
+                if (String(room.game_id) !== String(game_id)) {
+                    socket.emit("room-error", { 
+                        message: `Gagal Connect! Kamar ${room_code} terdaftar untuk permainan lain, bukan paket game ini.` 
+                    });
+                    return;
+                }
+
+                // 3. Validasi slot remote kosong
+                if (room.remote !== null) {
+                    socket.emit("room-error", { message: "Kamar ini sudah memiliki pengendali remote aktif!" });
+                    return;
+                }
+
+                // Jika lolos semua validasi, masukkan ke sesi room
+                room.remote = socket.id;
+                socket.data = { room_code, role: "remote" };
+                socket.join(`session-${room_code}`);
+
+                // Beritahu remote kalau sukses masuk
+                socket.emit("room-status", { 
+                    success: true, 
+                    game_id: room.game_id, 
+                    message: "Berhasil terhubung ke layar utama!" 
+                });
+
+                // Beritahu display kalau remote berpasangan sudah masuk
+                socket.to(`session-${room_code}`).emit("remote-connected");
+                console.log(`[JOIN MATCHED] Remote sukses masuk ke Room: ${room_code} untuk Game ID: ${game_id}`);
             });
 
-            socket.on("set-active-player", (data) => {
-                socket.broadcast.emit("set-active-player", data);
-            });
+            // =========================================================
+            // 3. FUNGSI PEMBANTU UNTUK FORWARD EVENT SESI
+            // =========================================================
+            const forwardToSession = (eventName: string) => {
+                socket.on(eventName, (data) => {
+                    const { room_code } = socket.data || {};
+                    if (room_code) {
+                        socket.to(`session-${room_code}`).emit(eventName, data);
+                    }
+                });
+            };
 
-            socket.on("set-active-tab-blank", (data) => {
-                socket.broadcast.emit("set-active-tab-blank", data);
-            });
+            // Memastikan seluruh event menggunakan fungsi forwardToSession yang benar
+            forwardToSession("handle-incorrect");
+            forwardToSession("set-minus-wrong");
+            forwardToSession("set-plus-wrong");
+            forwardToSession("set-question-visible");
+            forwardToSession("set-active-player");
+            forwardToSession("set-active-tab-blank");
+            forwardToSession("set-active-tab-main-round");
+            forwardToSession("set-active-tab-final");
+            forwardToSession("set-active-tab-point");
+            forwardToSession("set-active-tab-bonus");
+            forwardToSession("set-active-tab-main");
+            forwardToSession("set-active-tab-timer");
+            forwardToSession("set-active-tab-timer1");
+            forwardToSession("set-active-tab-timer2");
+            forwardToSession("set-reveal-answer");
+            forwardToSession("set-start-timer");
+            forwardToSession("set-stop-timer");
+            forwardToSession("show-timer-display");
+            forwardToSession("set-pause-timer");
+            forwardToSession("trigger-same-answer");
+            forwardToSession("set-same-answer");
+            forwardToSession("set-score");
+            forwardToSession("set-final-answer");
+            forwardToSession("set-final-score");
+            forwardToSession("set-final-top-answer");
+            forwardToSession("set-sound-effect");
+            forwardToSession("set-sound-special-answer");
+            forwardToSession("set-incorrect-sound");
+            forwardToSession("set-correct-sound");
 
-            socket.on("set-active-tab-main-round", (data) => {
-                socket.broadcast.emit("set-active-tab-main-round", data);
-            });
+            // =========================================================
+            // 4. DISCONNECT (PEMBERSIHAN DATA SESI)
+            // =========================================================
+            socket.on("disconnect", () => {
+                const { room_code, role } = socket.data || {};
 
-            socket.on("set-active-tab-final", (data) => {
-                socket.broadcast.emit("set-active-tab-final", data);
+                if (room_code && role && liveRooms[room_code]) {
+                    if (role === "display") {
+                        socket.to(`session-${room_code}`).emit("room-closed", { message: "Layar utama telah ditutup." });
+                        delete liveRooms[room_code];
+                        console.log(`[DESTROY] Room ${room_code} dihapus karena Display keluar.`);
+                    } else if (role === "remote") {
+                        liveRooms[room_code].remote = null;
+                        socket.to(`session-${room_code}`).emit("remote-disconnected");
+                        console.log(`[LEAVE] Remote keluar dari Room ${room_code}.`);
+                    }
+                }
             });
-
-            socket.on("set-active-tab-point", (type: RoundType) => {
-                socket.broadcast.emit("set-active-tab-point", type);
-            });
-
-            socket.on("set-active-tab-bonus", (data) => {
-                socket.broadcast.emit("set-active-tab-bonus", data);
-            });
-
-            socket.on("set-active-tab-main", (data) => {
-                socket.broadcast.emit("set-active-tab-main", data);
-            });
-
-            socket.on("set-active-tab-timer1", (data) => {
-                socket.broadcast.emit("set-active-tab-timer1", data);
-            });
-
-            socket.on("set-active-tab-timer2", (data) => {
-                socket.broadcast.emit("set-active-tab-timer2", data);
-            });
-
-            socket.on("set-reveal-answer", (data) => {
-                socket.broadcast.emit("set-reveal-answer", data);
-            });
-            
-            socket.on("set-start-timer", (data) => {
-                socket.broadcast.emit("set-start-timer", data);
-            });
-            
-            socket.on("set-stop-timer", (data) => {
-                socket.broadcast.emit("set-stop-timer", data);
-            });
-            
-            socket.on("set-same-answer", (data) => {
-                socket.broadcast.emit("set-same-answer", data);
-            });
-
-            socket.on("set-score", (data) => {
-                socket.broadcast.emit("set-score", data);
-            });
-            
-            socket.on("set-final-answer", (data) => {
-                socket.broadcast.emit("set-final-answer", data);
-            });
-
-            socket.on("set-final-score", (data) => {
-                socket.broadcast.emit("set-final-score", data);
-            });
-
-            socket.on("set-final-top-answer", (data) => {
-                socket.broadcast.emit("set-final-top-answer", data);
-            });
-
-            socket.on("set-sound-effect", (data) => {
-                socket.broadcast.emit("set-sound-effect", data);
-            });
-
-            socket.on("set-sound-special-answer", (data) => {
-                socket.broadcast.emit("set-sound-special-answer", data);
-            });
-
-            socket.on("set-incorrect-sound", (data) => {
-                socket.broadcast.emit("set-incorrect-sound", data);
-            });
-
-            socket.on("set-correct-sound", (data) => {
-                socket.broadcast.emit("set-correct-sound", data);
-            });
-
         });
-        
+
         res.socket.server.io = io;
     }
 
