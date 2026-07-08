@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from 'react';
+import PageLoader from "@/components/PageLoader";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -27,6 +29,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Suspense fallback={null}>
+          <PageLoader />
+        </Suspense>
+
         {children}
       </body>
     </html>

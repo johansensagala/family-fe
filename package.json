@@ -20,6 +20,7 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "sweetalert2": "^11.22.2",
+    "topbar": "^3.0.0",
     "use-debounce": "^10.0.6",
     "ws": "^8.18.1"
   },

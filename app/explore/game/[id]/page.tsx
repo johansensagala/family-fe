@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
-    Monitor, Smartphone, Star, Loader2, X, Edit3, Trash2, Trophy, MessageCircle, ChevronDown, ChevronUp 
+    Monitor, Smartphone, Star, Loader2, X, Edit3, Trash2, Trophy, MessageCircle, ChevronDown, ChevronUp, Eye, Play, Heart, UserCircle
 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar';
 import Header from '../../components/Header';
@@ -14,7 +14,8 @@ import {
     deleteGameReview, 
     deleteGame, 
     recordGameInteraction,
-    updateGameReview // 👇 1. Pastikan updateGameReview sudah di-import dari gameService
+    updateGameReview,
+    toggleFavoriteGame 
 } from '@/services/gameService';
 import { fetchWithAuth } from '@/services/authService';
 
@@ -26,27 +27,46 @@ const GameDetailPage = () => {
     const [reviews, setReviews] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedRound, setExpandedRound] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null); 
 
     // State untuk Modal Review
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
     const [submitting, setSubmitting] = useState(false);
-
-    // 👇 2. STATE BARU: Untuk melacak mode edit ulasan
     const [editingReviewId, setEditingReviewId] = useState<number | string | null>(null);
+
+    // State lokal status favorit game
+    const [isFavorite, setIsFavorite] = useState(false);
+
+    // Helper getAvatarSrc untuk parsing filename avatar
+    const getAvatarSrc = (filename: string) => {
+        if (!filename) return null;
+        if (filename.startsWith('/uploads') || filename.startsWith('http')) return filename; 
+        if (filename.includes('_free_')) return `/assets/avatars/free/${filename}`;
+        if (filename.includes('_silver_')) return `/assets/avatars/silver/${filename}`;
+        if (filename.includes('_platinum_')) return `/assets/avatars/platinum/${filename}`;
+        return null;
+    };
 
     const fetchData = async () => {
         try {
-            const [gameRes, reviewRes, userRes] = await Promise.all([
+            setLoading(true);
+            
+            const userRes = await fetchWithAuth('/users/me').catch(() => null);
+            setCurrentUser(userRes);
+
+            const [gameRes, reviewRes] = await Promise.all([
                 getGameById(id as string),
-                getGameReviews(id as string),
-                fetchWithAuth('/users/me').catch(() => null) 
+                getGameReviews(id as string)
             ]);
 
             setGame(gameRes);
             setReviews(reviewRes || []);
-            setCurrentUser(userRes);
+            
+            if (gameRes) {
+                setIsFavorite(gameRes.isFavorite || false);
+            }
 
             if (gameRes.rounds?.length > 0) setExpandedRound(gameRes.rounds[0].id);
 
@@ -69,6 +89,20 @@ const GameDetailPage = () => {
         if (id) fetchData();
     }, [id]);
 
+    const handleFavoriteToggle = async () => {
+        if (!currentUser) return alert("Silakan login terlebih dahulu untuk menambahkan ke favorit.");
+        
+        const previousState = isFavorite;
+        setIsFavorite(!previousState); 
+
+        try {
+            await toggleFavoriteGame(id as string);
+        } catch (err) {
+            console.error("Gagal mengubah status favorit pada detail game:", err);
+            setIsFavorite(previousState); 
+        }
+    };
+
     const handleDelete = async () => {
         const confirmDelete = confirm("Apakah Anda yakin ingin menghapus game ini secara permanen?");
         if (!confirmDelete) return;
@@ -82,7 +116,6 @@ const GameDetailPage = () => {
         }
     };
 
-    // 👇 3. FUNGSI BARU: Mengisi form modal dengan data ulasan yang mau diedit
     const handleOpenEditModal = (review: any) => {
         setEditingReviewId(review.id);
         setRating(review.rating);
@@ -96,11 +129,9 @@ const GameDetailPage = () => {
         setSubmitting(true);
         try {
             if (editingReviewId) {
-                // 👇 4. JALUR EDIT: Jika ada ID review yang sedang diedit, panggil PATCH
                 await updateGameReview(editingReviewId, { rating, comment });
                 alert("Ulasan berhasil diperbarui");
             } else {
-                // JALUR TAMBAH BARU
                 await addGameReview({
                     gameId: Number(id),
                     rating,
@@ -109,7 +140,6 @@ const GameDetailPage = () => {
                 alert("Ulasan berhasil dikirim");
             }
             
-            // Reset form dan tutup modal
             setShowReviewModal(false);
             setEditingReviewId(null);
             setComment("");
@@ -135,18 +165,25 @@ const GameDetailPage = () => {
 
     if (!game) return <div className="p-10 text-white font-black italic uppercase bg-[#0f172a] min-h-screen">Game not found.</div>;
 
+    // 💡 Tambahan: Parsing avatar milik game creator untuk Hero section
+    const gameCreatorAvatar = getAvatarSrc(game.avatar || game.user?.avatar);
+
     return (
         <div className="flex min-h-screen bg-[#0f172a] text-white font-sans">
             <Sidebar />
 
             <main className="flex-1 pl-24 pr-8 py-8">
-                <Header />
+                <div className="flex flex-col items-center mb-12 w-full">
+                    <h1 className="text-5xl font-black italic tracking-tighter text-white mb-6 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] uppercase">
+                        Detail Game: {game.name}
+                    </h1>
+                </div>
 
                 {/* Hero Section */}
                 <div className="relative rounded-[2.5rem] overflow-hidden bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 p-10 mb-8 shadow-2xl">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-                        <div>
-                            <div className="flex items-center gap-3 mb-4">
+                        <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-3 mb-4">
                                 <span className="px-4 py-1 bg-blue-500/20 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-500/30 inline-block">
                                     {game.isPublic ? 'Public Game' : 'Private Game'}
                                 </span>
@@ -155,10 +192,75 @@ const GameDetailPage = () => {
                                         Your Game
                                     </span>
                                 )}
+                                {game.category?.name && (
+                                    <span className="px-4 py-1 bg-orange-500/20 text-orange-400 rounded-full text-[10px] font-black uppercase tracking-widest border border-orange-500/30 inline-block">
+                                        {game.category.name}
+                                    </span>
+                                )}
                             </div>
-                            <h1 className="text-5xl font-black italic tracking-tighter uppercase leading-none">{game.name}</h1>
-                            <p className="text-gray-400 mt-4 font-medium">
-                                Created on {new Date(game.createdAt).toLocaleDateString()} • {game.rounds?.length || 0} Rounds
+                            
+                            <div className="flex items-center gap-4 flex-wrap">
+                                {/* 💡 UPDATE: Menampilkan avatar kreator game di samping Judul Utama */}
+                                <div className="w-12 h-12 rounded-full bg-gray-950 border-2 border-white/20 overflow-hidden shadow-2xl flex items-center justify-center shrink-0">
+                                    {gameCreatorAvatar ? (
+                                        <img 
+                                            src={gameCreatorAvatar} 
+                                            alt="Game Creator Avatar" 
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <UserCircle className="text-gray-400 w-full h-full p-1" />
+                                    )}
+                                </div>
+
+                                <h1 className="text-4xl sm:text-5xl font-black italic tracking-tighter uppercase leading-none">{game.name}</h1>
+                                
+                                <button
+                                    onClick={handleFavoriteToggle}
+                                    data-skip-loader="true"
+                                    className={`p-3 rounded-2xl border transition-all flex items-center justify-center gap-2 active:scale-95 ${
+                                        isFavorite 
+                                            ? "bg-pink-500/20 text-pink-500 border-pink-500/40 shadow-lg shadow-pink-500/10 scale-105" 
+                                            : "bg-gray-900/60 text-gray-400 border-white/10 hover:text-pink-400 hover:border-pink-500/30"
+                                    }`}
+                                    title={isFavorite ? "Hapus dari Favorit" : "Tambah ke Favorit"}
+                                >
+                                    <Heart size={20} className={isFavorite ? "fill-pink-500" : ""} />
+                                    {isFavorite && <span className="text-xs font-black uppercase tracking-wider pr-1">Favorited</span>}
+                                </button>
+                            </div>
+                            
+                            {/* AREA METADATA STATISTIK GAME LENGKAP */}
+                            <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-gray-400 mt-5 bg-gray-950/20 border border-white/5 py-2 px-4 rounded-2xl w-fit backdrop-blur-sm">
+                                <p className="text-gray-300">By {game.author || 'Community'}</p>
+                                <span className="text-gray-700">•</span>
+                                <span className="flex items-center gap-1.5 hover:text-white transition-colors">
+                                    <Eye size={14} className="text-gray-500" />
+                                    {game.stats?.viewCount ?? 0} views
+                                </span>
+                                <span className="text-gray-700">•</span>
+                                <span className="flex items-center gap-1.5 hover:text-white transition-colors">
+                                    <Play size={12} className="text-gray-500 fill-gray-500" />
+                                    {game.stats?.playCount ?? 0} plays
+                                </span>
+                                <span className="text-gray-700">•</span>
+                                <span className="flex items-center gap-1.5">
+                                    <Trophy size={13} className="text-gray-500" />
+                                    {game.rounds?.length || 0} Rounds
+                                </span>
+                                {game.stats?.avgRating > 0 && (
+                                    <>
+                                        <span className="text-gray-700">•</span>
+                                        <span className="flex items-center gap-1 text-amber-400 font-bold">
+                                            <Star size={13} className="fill-amber-400 text-amber-400" />
+                                            {Number(game.stats.avgRating).toFixed(1)}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+
+                            <p className="text-[11px] text-gray-500 font-medium mt-3 px-1">
+                                Dibuat pada {new Date(game.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
                             </p>
 
                             {isOwner && (
@@ -179,11 +281,18 @@ const GameDetailPage = () => {
                             )}
                         </div>
 
-                        <div className="flex flex-wrap gap-3">
-                            <button className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-2xl font-bold hover:bg-gray-200 transition-all active:scale-95 shadow-xl shadow-white/5">
+                        <div className="flex flex-wrap gap-3 shrink-0">
+                            <button 
+                                onClick={() => window.open(`/explore/game/display/${id}`, '_blank')}
+                                className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-2xl font-bold hover:bg-gray-200 transition-all active:scale-95 shadow-xl shadow-white/5"
+                            >
                                 <Monitor size={20} /> Display
                             </button>
-                            <button className="flex items-center gap-2 bg-gray-800 text-white px-6 py-3 rounded-2xl font-bold border border-white/10 hover:bg-gray-700 transition-all active:scale-95">
+                            
+                            <button 
+                                onClick={() => window.open(`/explore/game/remote/${id}`, '_blank')}
+                                className="flex items-center gap-2 bg-gray-800 text-white px-6 py-3 rounded-2xl font-bold border border-white/10 hover:bg-gray-700 transition-all active:scale-95"
+                            >
                                 <Smartphone size={20} /> Remote
                             </button>
                         </div>
@@ -250,6 +359,7 @@ const GameDetailPage = () => {
                             ) : (
                                 reviews.map((review) => {
                                     const isMyReview = currentUser && review.userId === currentUser.id;
+                                    const rAvatarSrc = getAvatarSrc(review.user?.avatar || review.avatar);
 
                                     const handleDeleteReview = async (reviewId: number) => {
                                         const confirmDelete = confirm("Apakah Anda yakin ingin menghapus ulasan Anda?");
@@ -257,7 +367,7 @@ const GameDetailPage = () => {
                                         
                                         try {
                                             await deleteGameReview(reviewId);
-                                            alert("Ulasan berhasil dihapus");
+                                            alert("Ulasan berhasil deleted");
                                             fetchData();
                                         } catch (err: any) {
                                             alert("Gagal menghapus ulasan: " + err.message);
@@ -268,11 +378,18 @@ const GameDetailPage = () => {
                                         <div key={review.id} className="bg-gray-900/40 border border-white/5 p-6 rounded-3xl backdrop-blur-sm relative group transition-all hover:border-white/10">
                                             <div className="flex items-center justify-between gap-4 mb-4">
                                                 <div className="flex items-start gap-4">
-                                                    <img 
-                                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${review.user?.name || review.userId}`} 
-                                                        className="w-10 h-10 rounded-2xl bg-gray-800 border border-white/10" 
-                                                        alt="avatar"
-                                                    />
+                                                    <div className="w-10 h-10 rounded-full bg-gray-950 border border-white/10 overflow-hidden shadow-md flex items-center justify-center shrink-0">
+                                                        {rAvatarSrc ? (
+                                                            <img 
+                                                                src={rAvatarSrc} 
+                                                                className="w-full h-full object-cover" 
+                                                                alt="User Avatar"
+                                                            />
+                                                        ) : (
+                                                            <UserCircle className="text-gray-400 w-full h-full p-0.5 bg-gray-950 rounded-full" />
+                                                        )}
+                                                    </div>
+
                                                     <div>
                                                         <div className="flex items-center gap-2">
                                                             <h4 className="font-bold text-sm">{review.user?.name || 'User'}</h4>
@@ -309,10 +426,8 @@ const GameDetailPage = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Action Buttons (Hanya muncul jika ulasan milik sendiri) */}
                                                 {isMyReview && (
                                                     <div className="flex items-center gap-1 md:opacity-0 md:group-hover:opacity-100 transition-all">
-                                                        {/* 👇 5. TOMBOL EDIT: Memicu pembukaan modal dengan state data ulasan */}
                                                         <button 
                                                             onClick={() => handleOpenEditModal(review)}
                                                             className="p-2 text-gray-500 hover:text-blue-400 bg-gray-800/0 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20 rounded-xl transition-all"
@@ -337,7 +452,6 @@ const GameDetailPage = () => {
                             )}
                         </div>
 
-                        {/* Jika sudah review, tampilkan tombol Edit cepat di bagian bawah list review */}
                         {!isOwner && currentUser && hasReviewed && (
                             <button 
                                 onClick={() => {
@@ -353,7 +467,7 @@ const GameDetailPage = () => {
                         {!isOwner && currentUser && !hasReviewed && (
                             <button 
                                 onClick={() => {
-                                    setEditingReviewId(null); // Bersihkan sisa id edit
+                                    setEditingReviewId(null); 
                                     setShowReviewModal(true);
                                 }}
                                 className="w-full py-4 border-2 border-dashed border-gray-800 rounded-3xl text-gray-600 font-black uppercase text-[10px] tracking-[0.2em] hover:border-blue-500/40 hover:text-blue-400 transition-all flex items-center justify-center gap-2"
@@ -364,7 +478,7 @@ const GameDetailPage = () => {
                     </div> 
                 </div> 
 
-                {/* Modal Review (Dinamis untuk Post / Edit) */}
+                {/* Modal Review */}
                 {showReviewModal && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
                         <div className="bg-[#1e293b] border border-white/10 w-full max-w-md rounded-[2.5rem] p-8 relative shadow-2xl">
@@ -380,7 +494,6 @@ const GameDetailPage = () => {
                                 <X size={24} />
                             </button>
 
-                            {/* 👇 6. DINAMIS: Label judul modal berubah mengikuti state mode */}
                             <h3 className="text-2xl font-black uppercase mb-2">
                                 {editingReviewId ? 'Edit Ulasan Anda' : 'Tulis Ulasan'}
                             </h3>

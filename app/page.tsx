@@ -75,11 +75,13 @@ const FamilyFeudHome = () => {
                     {isLoggedIn ? (
                         /* TAMPILAN JIKA SUDAH LOGIN */
                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <button 
-                                className="w-full sm:w-auto min-w-[200px] bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 px-6 py-3 rounded-lg font-bold text-lg md:text-xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wider italic"
-                            >
-                                <Play size={22} /> Start New Game
-                            </button>
+                            <Link href="/explore" className="w-full sm:w-auto">
+                                <button 
+                                    className="w-full sm:w-auto min-w-[200px] bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 px-6 py-3 rounded-lg font-bold text-lg md:text-xl shadow-lg transition-all flex items-center justify-center gap-2 uppercase tracking-wider italic"
+                                >
+                                    <Play size={22} /> Start New Game
+                                </button>
+                            </Link>
                             <button 
                                 onClick={handleLogout}
                                 className="w-full sm:w-auto min-w-[200px] bg-gradient-to-b from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 px-6 py-3 rounded-lg font-bold text-lg md:text-xl shadow-lg transition-all flex items-center justify-center gap-2"
@@ -137,14 +139,22 @@ const FamilyFeudHome = () => {
 
                 {/* Sidebar Icons (Desktop) / Bottom Icons (Mobile) */}
                 <div className="fixed right-0 top-1/2 -translate-y-1/2 z-20 flex-col gap-6 pr-4 hidden lg:flex">
-                    <ActionButton icon={HelpCircle} label="Help" />
-                    <ActionButton icon={User} label="About" />
+                    <Link href="/help">
+                        <ActionButton icon={HelpCircle} label="Help" />
+                    </Link>
+                    <Link href="/about">
+                        <ActionButton icon={User} label="About" />
+                    </Link>
                 </div>
-                
+                                
                 {/* Mobile version of side icons */}
                 <div className="relative z-10 flex lg:hidden justify-center gap-8 mt-12 mb-6">
-                    <ActionButton icon={HelpCircle} label="Help" mobile />
-                    <ActionButton icon={User} label="About" mobile />
+                    <Link href="/help">
+                        <ActionButton icon={HelpCircle} label="Help" mobile />
+                    </Link>
+                    <Link href="/about">
+                        <ActionButton icon={User} label="About" mobile />
+                    </Link>
                 </div>
 
             </div>

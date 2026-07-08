@@ -65,28 +65,47 @@ export const logout = async () => {
     return await res.json();
 };
 
+export const updateProfile = (payload: { name: string; email: string } | FormData) => {
+    const isFormData = payload instanceof FormData;
+
+    return fetchWithAuth('/users/update', {
+        method: 'PATCH',
+        body: isFormData ? payload : JSON.stringify(payload),
+        // 💡 JIKA FORMDATA, KOSONGKAN HEADERS AGAR FETCH OTOMATIS GENERATE MULTIPART + BOUNDARY
+        headers: isFormData ? {} : { 'Content-Type': 'application/json' },
+    });
+};
+
 /**
  * HELPER: fetchWithAuth
  * Mengirimkan HttpOnly Cookie secara otomatis dan menangani sesi kedaluwarsa.
  */
 export const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
-    console.log(`fetchWithAuth called: ${endpoint} with options:`, options); // Debug log
+    console.log(`fetchWithAuth called: ${endpoint} with options:`, options); 
 
-    console.log(`Current BASE_URL: ${BASE_URL}`); // Debug log untuk memastikan URL benar
+    // 1. Siapkan object headers gabungan secara dinamis
+    const dynamicHeaders: Record<string, string> = {
+        ...((options.headers as Record<string, string>) || {}),
+    };
+
+    // 2. KUNCI UTAMA: Jika body BUKAN FormData, baru tambahkan default Content-Type JSON
+    if (!(options.body instanceof FormData)) {
+        if (!dynamicHeaders['Content-Type']) {
+            dynamicHeaders['Content-Type'] = 'application/json';
+        }
+    } else {
+        // Jika tidak sengaja terbawa di options, hapus paksa agar di-handle otomatis oleh browser
+        delete dynamicHeaders['Content-Type'];
+    }
+
     const res = await fetch(`${BASE_URL}${endpoint}`, {
         ...options,
-        // CRITICAL: Ini memberitahu browser untuk menyertakan cookie HttpOnly dalam request
-        credentials: 'include', 
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
+        credentials: 'include', // CRITICAL untuk HttpOnly Cookie
+        headers: dynamicHeaders,  // 💡 Gunakan header hasil filter dinamis kita
     });
 
     if (!res.ok) {
         if (res.status === 401) {
-            // Karena kita pakai HttpOnly, kita tidak bisa hapus token manual.
-            // Cukup arahkan user kembali ke login.
             throw new Error('Unauthorized');
         }
         const msg = await res.text();

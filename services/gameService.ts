@@ -59,6 +59,20 @@ export const deleteQuestion = (id: number | string) =>
 export const getAllGames = (limit = 10, offset = 0, include = "", search = "") => 
     fetchWithAuth(`/games?limit=${limit}&offset=${offset}&include=${include}&search=${search}`);
 
+/**
+ * Mendapatkan game publik menggunakan algoritma hot ranking/populer
+ */
+export const getPublicGames = (limit = 10, offset = 0, search = "") => 
+    fetchWithAuth(`/games/public?limit=${limit}&offset=${offset}&search=${search}`);
+
+export const getFavoriteGames = (limit = 10, offset = 0) => 
+    fetchWithAuth(`/games/favorites?limit=${limit}&offset=${offset}`);
+
+export const toggleFavoriteGame = (id: number | string) => 
+    fetchWithAuth(`/games/${id}/favorite`, {
+        method: 'POST', // atau 'PATCH' sesuai dengan implementasi di controller NestJS kamu
+    });
+
 export const getGameById = (id: number | string) => fetchWithAuth(`/games/${id}`);
 
 export const createGameWithRounds = (payload: {
