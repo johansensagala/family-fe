@@ -216,6 +216,12 @@ export default function GameDisplayPage({ params }: { params: Promise<{ game_id:
                 return { ...prev, scores: newScores, topAnswers: newTop };
             });
         });
+
+        socket.on("set-sound-effect", (data: { music: string }) => {
+            if (data?.music) {
+                handleSound(data.music);
+            }
+        });
         
         return () => {
             socket.removeAllListeners();
